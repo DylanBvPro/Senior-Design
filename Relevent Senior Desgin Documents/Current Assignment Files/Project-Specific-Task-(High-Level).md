@@ -1,0 +1,17 @@
+# Project-Specific Tasks
+
+1. Research game engines that best fit the technical and creative requirements of the project. (Assigned to Dylan)  
+2. Investigate the selected game engine’s documentation, tutorials, and community resources to build foundational knowledge. (Assigned to Dylan)  
+3. Research traditional game development principles, including level design, player feedback loops, and progression systems. (Assigned to Dylan)  
+4. Design the initial game concept and narrative script, including core mechanics and player objectives. (Assigned to Dylan)  
+5. Document early design decisions, noting what worked well and what needs improvement. (Assigned to Dylan)  
+6. Design visual assets such as character models, environment elements, and UI components. (Assigned to Dylan)  
+7. Design audio assets including background music, sound effects, and voice cues. (Assigned to Dylan)  
+8. Test early gameplay attributes such as movement, combat mechanics, and camera control. (Assigned to Dylan)  
+9. Refine gameplay attributes based on initial testing feedback and performance metrics. (Assigned to Dylan)  
+10. Validate single-player experience through one-on-one playtesting and user feedback. (Assigned to Dylan)  
+11. Research multiplayer frameworks and networking capabilities compatible with the chosen engine. (Assigned to Dylan)  
+12. Develop core multiplayer functionality including session management, player synchronization, and matchmaking. (Assigned to Dylan)  
+13. Test multiplayer features with multiple users to identify latency issues, bugs, and usability concerns. (Assigned to Dylan)  
+14. Refine multiplayer systems based on test results and user feedback. (Assigned to Dylan)  
+15. Document multiplayer implementation details and known limitations for future development. (Assigned to Dylan)
