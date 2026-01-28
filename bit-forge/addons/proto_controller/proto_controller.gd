@@ -102,9 +102,11 @@ var normal_camera_height: Vector3
 @onready var head: Node3D = $Head
 @onready var collider: CollisionShape3D = $Collider
 @onready var sprint_bar: ProgressBar = $"Head/Camera3D/SprintUI/SprintBar"
-
+@onready var weapon_anim: AnimationPlayer = $"AnimationPlayer"
 @onready var health_bar: ProgressBar = $"Head/Camera3D/HealthUI/HpBar"
 @onready var health_label: Label = $"Head/Camera3D/HealthUI/HpBar/HpLabel"
+@onready var sword_hitbox: Area3D = $"Rig/Skeleton3D/handslot_r/1H_Sword/Sword HitBox"
+
 
 
 func _ready() -> void:
@@ -113,6 +115,10 @@ func _ready() -> void:
 	look_rotation.y = rotation.y
 	look_rotation.x = head.rotation.x
 	sprint_time = max_sprint_time
+	sword_hitbox.monitoring = false
+	sword_hitbox.monitorable = true
+	sword_hitbox.body_entered.connect(_on_sword_body_entered)
+
 	
 	normal_collider_height = collider.shape.height
 	normal_camera_height = head.position
@@ -122,6 +128,26 @@ func _ready() -> void:
 	current_armor = current_armor
 	_update_health_bar()
 
+func _on_sword_body_entered(body: Node):
+	# Check if the body is an enemy and has an apply_damage function
+	if body.has_method("apply_damage"):
+		print("Hit enemy:", body.name)
+		body.apply_damage(weapon_damage)
+		
+func _enable_sword_hitbox():
+	if not sword_hitbox:
+		return
+	sword_hitbox.monitoring = true
+	# Check immediately for overlapping bodies
+	for body in sword_hitbox.get_overlapping_bodies():
+		print("Hit:", body.name)
+		if body.has_method("apply_damage"):
+			body.apply_damage(weapon_damage)
+
+func _disable_sword_hitbox():
+	if not sword_hitbox:
+		return
+	sword_hitbox.monitoring = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Mouse capturing
@@ -134,6 +160,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if mouse_captured and event is InputEventMouseMotion:
 		rotate_look(event.relative)
 	
+		# ATTACK (left click)
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			_try_attack()
+			
 	# Toggle freefly mode
 	if can_freefly and Input.is_action_just_pressed(input_freefly):
 		if not freeflying:
@@ -297,6 +328,28 @@ func sprint_recharged() -> bool:
 	if sprint_exhausted:
 		return sprint_time >= max_sprint_time
 	return sprint_recharge_timer <= 0.0
+
+func can_attack() -> bool:
+	return Time.get_ticks_msec() / 1000.0 - weapon_last_shot_time >= weapon_fire_rate
+	
+func _try_attack() -> void:
+	if not can_attack():
+		return
+
+	weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
+	print("Player Swung Sword")
+	
+	if weapon_anim:
+		weapon_anim.stop()
+		weapon_anim.play("1H_Melee_Attack_Slice_Horizontal")
+
+	# Enable hitbox briefly
+	_enable_sword_hitbox()
+	await get_tree().create_timer(0.1).timeout  # hit window duration
+	_disable_sword_hitbox()
+
+	# Optional: apply damage here later (raycast / melee hitbox)
+	
 
 ## Checks if some Input Actions haven't been created.
 ## Disables functionality accordingly.

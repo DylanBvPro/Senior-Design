@@ -6,6 +6,7 @@ extends CharacterBody3D
 
 @export var move_speed: float = 3.0
 @export var chase_speed: float = 6.0
+@export var max_hp := 20.0
 
 @export var detection_distance: float = 12.0
 @export var pursue_distance: float = 1.8
@@ -214,3 +215,15 @@ func _return_to_roaming() -> void:
 	
 	# Switch animation to walking immediately
 	state_machine.travel(Idle_Anim)
+	
+var current_hp := max_hp
+
+func apply_damage(amount: float) -> void:
+	current_hp -= amount
+	print("Enemy hit! HP:", current_hp)
+
+	if current_hp <= 0:
+		_die()
+
+func _die() -> void:
+	queue_free()
