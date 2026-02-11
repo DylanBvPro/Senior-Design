@@ -33,6 +33,8 @@ extends CharacterBody3D
 @onready var free_roam: FreeRoamMovement = $FreeRoam
 @onready var player_finder: PlayerFinder = $PlayerFinder
 @onready var nav_region: NavigationRegion3D = $"../../NavigationRegion3D"
+@onready var ragdoll: Node = $Rig/Skeleton3D/Ragdoll  # Assuming the skeleton's ragdoll parts are a child node of the skeleton
+
 # --------------------
 # Internal State
 # --------------------
@@ -48,8 +50,13 @@ var _idle_timer: Timer = null
 # Lifecycle
 # --------------------
 
+var current_hp := max_hp
+
 func _ready() -> void:
 	animation_tree.active = true
+
+	# Initially disable ragdoll physics
+	disable_ragdoll()
 
 	# Forward tuning vars to PlayerFinder
 	player_finder.detection_distance = detection_distance
@@ -190,8 +197,6 @@ func _handle_chase(player_pos: Vector3) -> void:
 		velocity.z = 0
 		state_machine.travel(Idle_Anim, true)
 
-
-
 func _handle_attack() -> void:
 	if is_attacking:
 		return
@@ -215,8 +220,10 @@ func _return_to_roaming() -> void:
 	
 	# Switch animation to walking immediately
 	state_machine.travel(Idle_Anim)
-	
-var current_hp := max_hp
+
+# --------------------
+# HP / Death Logic
+# --------------------
 
 func apply_damage(amount: float) -> void:
 	current_hp -= amount
@@ -226,4 +233,44 @@ func apply_damage(amount: float) -> void:
 		_die()
 
 func _die() -> void:
-	queue_free()
+	print("Skeleton died!")
+
+	# Disable further movement or actions
+	is_wandering = false
+	is_taunting = false
+	is_attacking = false
+
+	# Enable ragdoll or physics simulation here
+	enable_ragdoll()
+
+	# Optionally, play a death animation here
+	state_machine.travel("Die_Anim")  # You can create a "Die_Anim" if you have one
+
+# --------------------
+# Ragdoll Enable/Disable
+# --------------------
+
+func enable_ragdoll() -> void:
+	# Ensure ragdoll is enabled only upon death
+	if ragdoll is PhysicalBoneSimulator3D:
+		ragdoll.set_physics_process(true)  # Enable physics processing for ragdoll parts
+		ragdoll.active = true  # Activate ragdoll simulator (this is necessary for it to work)
+		ragdoll.visible = true  # Make ragdoll visible
+	
+	# Apply initial forces if necessary (e.g., gravity)
+	for part in ragdoll.get_children():
+		if part is PhysicalBone3D:
+			part.linear_velocity = Vector3.ZERO  # Stop any prior velocity from affecting the bones
+			part.angular_velocity = Vector3.ZERO  # Stop angular movement immediately
+
+			# Optionally, apply a small impulse for natural motion (optional)
+			# part.apply_impulse(Vector3.ZERO, Vector3(0, -5, 0))  # Example to gently move them down
+
+func disable_ragdoll() -> void:
+	# Disable ragdoll physics before activation on death
+	if ragdoll != null and ragdoll is PhysicalBoneSimulator3D:
+		ragdoll.set_physics_process(false)
+		ragdoll.active = false  # Deactivate ragdoll simulator to stop physics processing
+		ragdoll.visible = false  # Hide ragdoll
+	else:
+		print("Ragdoll node is not assigned or invalid!")
