@@ -115,7 +115,7 @@ func _ready() -> void:
 	look_rotation.y = rotation.y
 	look_rotation.x = head.rotation.x
 	sprint_time = max_sprint_time
-	sword_hitbox.monitoring = false
+	sword_hitbox.monitoring = true
 	sword_hitbox.monitorable = true
 	sword_hitbox.body_entered.connect(_on_sword_body_entered)
 
@@ -130,15 +130,18 @@ func _ready() -> void:
 
 func _on_sword_body_entered(body: Node):
 	# Check if the body is an enemy and has an apply_damage function
+	print("body: ", body)
 	if body.has_method("apply_damage"):
 		print("Hit enemy:", body.name)
 		body.apply_damage(weapon_damage)
 		
 func _enable_sword_hitbox():
 	if not sword_hitbox:
+		print("Sword hitbox check: ", sword_hitbox)
 		return
 	sword_hitbox.monitoring = true
 	# Check immediately for overlapping bodies
+	print("Sword hitbox check: ", sword_hitbox)
 	for body in sword_hitbox.get_overlapping_bodies():
 		print("Hit:", body.name)
 		if body.has_method("apply_damage"):

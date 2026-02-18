@@ -1,0 +1,76 @@
+[gd_scene load_steps=11 format=3 uid="uid://bdvl7l57y1mok"]
+
+[ext_resource type="Texture2D" uid="uid://diev3t82gdo04" path="res://simple-white-circle-and-drop-shadow-png.png" id="1_2pqqt"]
+[ext_resource type="Texture2D" uid="uid://b6d76bdlwpno3" path="res://models/purepng.com-fire-flamefire-flameseffectsfirehotflameheat-221519330402x1lug.png" id="2_5ltu8"]
+
+[sub_resource type="Curve" id="Curve_2pqqt"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.43939394, 0.82022476), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_5ltu8"]
+curve = SubResource("Curve_2pqqt")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_x6ecg"]
+emission_shape = 1
+emission_sphere_radius = 0.2
+gravity = Vector3(0, 5, 0)
+scale_curve = SubResource("CurveTexture_5ltu8")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x6ecg"]
+transparency = 2
+alpha_scissor_threshold = 0.9
+alpha_antialiasing_mode = 0
+no_depth_test = true
+albedo_color = Color(0, 0, 0, 1)
+albedo_texture = ExtResource("1_2pqqt")
+emission_enabled = true
+emission = Color(0.9314077, 0.16007765, 0, 1)
+emission_energy_multiplier = 10.0
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_eo6dx"]
+material = SubResource("StandardMaterial3D_x6ecg")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_2pqqt"]
+emission_shape = 1
+emission_sphere_radius = 0.2
+gravity = Vector3(0, 5, 0)
+scale_min = 0.5
+scale_max = 0.5
+scale_curve = SubResource("CurveTexture_5ltu8")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_icfi2"]
+transparency = 2
+alpha_scissor_threshold = 0.9
+alpha_antialiasing_mode = 0
+no_depth_test = true
+albedo_color = Color(0.07683582, 0.07683582, 0.07683582, 1)
+albedo_texture = ExtResource("2_5ltu8")
+emission_enabled = true
+emission = Color(0.9314077, 0.16007765, 0, 1)
+emission_energy_multiplier = 0.0
+billboard_mode = 1
+billboard_keep_scale = true
+
+[sub_resource type="QuadMesh" id="QuadMesh_x6ecg"]
+material = SubResource("StandardMaterial3D_icfi2")
+
+[node name="fireNode" type="Node3D"]
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="."]
+sorting_use_aabb_center = false
+amount = 10
+randomness = 1.0
+process_material = SubResource("ParticleProcessMaterial_x6ecg")
+draw_pass_1 = SubResource("QuadMesh_eo6dx")
+
+[node name="GPUParticles3D2" type="GPUParticles3D" parent="GPUParticles3D"]
+amount = 10
+lifetime = 1.5
+randomness = 1.0
+process_material = SubResource("ParticleProcessMaterial_2pqqt")
+draw_pass_1 = SubResource("QuadMesh_x6ecg")

@@ -1,11 +1,13 @@
-[gd_scene load_steps=13 format=3 uid="uid://c5glndwsmdmgi"]
+[gd_scene load_steps=15 format=3 uid="uid://c5glndwsmdmgi"]
 
 [ext_resource type="MeshLibrary" uid="uid://b5otnvts5whc5" path="res://simplemeshlib3.tres" id="1_gybe8"]
+[ext_resource type="PackedScene" uid="uid://bdvl7l57y1mok" path="res://fire.tscn" id="2_3gsno"]
 [ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="2_gybe8"]
 [ext_resource type="MeshLibrary" uid="uid://dxtwnwd8k4i8f" path="res://simplemeshlib3333.tres" id="3_10ia8"]
 [ext_resource type="PackedScene" uid="uid://cel7evpf510jn" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/torch_mounted.gltf.glb" id="4_mlujb"]
 [ext_resource type="Shader" uid="uid://cjh14klv47u5k" path="res://tourchfire.tres" id="5_bnu7n"]
 [ext_resource type="Texture2D" uid="uid://b6d76bdlwpno3" path="res://models/purepng.com-fire-flamefire-flameseffectsfirehotflameheat-221519330402x1lug.png" id="6_l5di8"]
+[ext_resource type="PackedScene" uid="uid://bshr5587k4ah1" path="res://lantern_hanging_2.tscn" id="8_jvkvm"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_gybe8"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -19,7 +21,6 @@ background_mode = 2
 sky = SubResource("Sky_10ia8")
 tonemap_mode = 2
 glow_enabled = true
-volumetric_fog_enabled = true
 volumetric_fog_density = 0.2012
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_l5di8"]
@@ -63,11 +64,15 @@ data = {
 }
 metadata/_editor_floor_ = Vector3(0, 2, 0)
 
+[node name="fireNode" parent="." instance=ExtResource("2_3gsno")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2979215, 31.420296, -5.0587397)
+
 [node name="torch_mounted_gltf" parent="." instance=ExtResource("4_mlujb")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.077569, 32.23571, -10.746495)
 
 [node name="OmniLight3D" type="OmniLight3D" parent="torch_mounted_gltf"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9292488, 0.37429714)
+visible = false
 light_color = Color(3.719167, 2.1190805, 0, 1)
 light_energy = 0.534
 shadow_enabled = true
@@ -83,3 +88,6 @@ amount = 1
 lifetime = 5.0
 process_material = SubResource("ParticleProcessMaterial_3gsno")
 draw_pass_1 = SubResource("QuadMesh_jvkvm")
+
+[node name="lantern_hanging2" parent="." instance=ExtResource("8_jvkvm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.9894645, 33.50212, -4.856158)

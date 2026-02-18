@@ -1,7 +1,8 @@
-[gd_scene load_steps=22 format=4 uid="uid://ux6ydffb8bhs"]
+[gd_scene load_steps=26 format=4 uid="uid://ux6ydffb8bhs"]
 
 [ext_resource type="Texture2D" uid="uid://d254mvopdt5uy" path="res://models/Finished Models/seamless-pattern-ground-with-stones-brown-soil-texture-for-wallpaper-illustration-backdrop-land-background-for-graphic-design-game-vector.jpg" id="1_2cqfq"]
 [ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="1_ig7tw"]
+[ext_resource type="Texture2D" uid="uid://caqiq0awc8dga" path="res://pngtree-full-blood-moon-png-image_6539918.png" id="1_vivmo"]
 [ext_resource type="PackedScene" uid="uid://c1n0oqsgkluwu" path="res://models/barrel_small.gltf" id="2_0xm2m"]
 [ext_resource type="PackedScene" uid="uid://qbpawvhcv27g" path="res://small_barrel.tscn" id="3_h2yge"]
 [ext_resource type="PackedScene" uid="uid://8i1xpo346nfx" path="res://models/wall_doorway.gltf" id="5_7mycd"]
@@ -13,6 +14,7 @@
 [ext_resource type="Script" uid="uid://crddxox2qo1uv" path="res://area_3d_starting_room.gd" id="12_ycdy4"]
 [ext_resource type="Script" uid="uid://c3hkhfh2od6qf" path="res://area_3d_demo_room.gd" id="13_w48qg"]
 [ext_resource type="PackedScene" uid="uid://bfe7ahbjg7j0t" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/wall_doorway.glb" id="13_ycdy4"]
+[ext_resource type="PackedScene" uid="uid://bdvl7l57y1mok" path="res://fire.tscn" id="14_w48qg"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ig7tw"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -26,8 +28,21 @@ background_mode = 2
 sky = SubResource("Sky_0xm2m")
 tonemap_mode = 2
 glow_enabled = true
+fog_enabled = true
 volumetric_fog_enabled = true
-volumetric_fog_emission = Color(1, 1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_w48qg"]
+transparency = 1
+blend_mode = 3
+cull_mode = 1
+roughness_texture = ExtResource("1_vivmo")
+emission_enabled = true
+emission = Color(1, 0, 0, 1)
+emission_energy_multiplier = 102.8
+emission_texture = ExtResource("1_vivmo")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2cqfq"]
+albedo_texture = ExtResource("1_vivmo")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yaehf"]
 albedo_color = Color(0.25882354, 0.45882353, 0.25882354, 1)
@@ -93,8 +108,14 @@ size = Vector3(2, 2.9, 2)
 environment = SubResource("Environment_h2yge")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.69073445, -0.43301278, 0.57912505, 0.35051742, 0.5, 0.7919202, -0.63247406, 0.75, -0.19358869, -80.30121, 29.560541, -3.4022932)
+transform = Transform3D(0.7203673, -0.3816872, 0.57912505, -0.60827136, 0.05355698, 0.7919202, -0.33328196, -0.92273855, -0.19358878, -11.764341, 34.329655, 14.5128765)
+light_indirect_energy = 0.527
 shadow_enabled = true
+
+[node name="CSGSphere3D" type="CSGSphere3D" parent="DirectionalLight3D"]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 11, 0, 0)
+material_override = SubResource("StandardMaterial3D_w48qg")
+material = SubResource("StandardMaterial3D_2cqfq")
 
 [node name="Floor" type="CSGBox3D" parent="."]
 transform = Transform3D(200, 0, 0, 0, 1, 0, 0, 0, 200, 0.07946396, 2.861023e-06, -0.051418304)
@@ -185,3 +206,6 @@ script = ExtResource("13_w48qg")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D_demo_room"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.2005053, 1.1982079, 1)
 shape = SubResource("BoxShape3D_ycdy4")
+
+[node name="fireNode" parent="." instance=ExtResource("14_w48qg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 3, -4)

@@ -6,11 +6,11 @@ extends CharacterBody3D
 
 @export var move_speed: float = 3.0
 @export var chase_speed: float = 6.0
-@export var max_hp := 20.0
-
+@export var max_hp: float = 20.0
 @export var detection_distance: float = 12.0
 @export var pursue_distance: float = 1.8
 @export var taunt_chance: float = 0.3
+
 
 # Animation state names (AnimationTree)
 @export var Spawn_Anim: String = "Spawn_Ground_Skeletons"
@@ -19,6 +19,12 @@ extends CharacterBody3D
 @export var Run_Anim: String = "Running_C"
 @export var Taunt_Anim: String = "Taunt"
 @export var Attack_Anim: String = "Unarmed_Melee_Attack_Punch_A"
+@export var Hit_Anim: String = "Hit_B"
+@export var Death_Anim: String = "Death_C_Skeletons"
+@export var damage_amount: float = 5.0
+@export var attack_range: float = 2.0
+@export var attack_anim_duration: float = 0.9
+@export var attack_hit_time: float = 0.45
 
 @export var idle_time_range: Vector2 = Vector2(2.5, 9.5)
 
@@ -27,6 +33,7 @@ extends CharacterBody3D
 # --------------------
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var animation_tree: AnimationTree = $AnimationTree
+@onready var animation_player : AnimationPlayer = $"AnimationPlayer"
 @onready var state_machine: AnimationNodeStateMachinePlayback = \
 	animation_tree.get("parameters/playback") as AnimationNodeStateMachinePlayback
 
@@ -45,16 +52,21 @@ var is_taunting: bool = false
 var is_attacking: bool = false
 var _is_in_idle: bool = false
 var _idle_timer: Timer = null
+var _orig_collision_layer: int = 1
+var _orig_collision_mask: int = 1
 
 # --------------------
 # Lifecycle
 # --------------------
 
-var current_hp := max_hp
+var current_hp: float = max_hp
 
 func _ready() -> void:
-	animation_tree.active = true
+	animation_tree.active = false
+	_orig_collision_layer = collision_layer
+	_orig_collision_mask = collision_mask
 
+	# Save original collision layers so we can restore after ragdoll
 	# Initially disable ragdoll physics
 	disable_ragdoll()
 
@@ -204,12 +216,38 @@ func _handle_attack() -> void:
 	is_attacking = true
 	velocity.x = 0.0
 	velocity.z = 0.0
-
 	state_machine.travel(Attack_Anim)
 
-	await get_tree().create_timer(0.9).timeout
+	# Wait until the attack's hit frame, then try to deal damage
+	await get_tree().create_timer(attack_hit_time).timeout
+	_try_deal_damage()
+
+	# Wait the remainder of the attack animation before allowing other actions
+	var remaining: float = max(0.0, attack_anim_duration - attack_hit_time)
+	await get_tree().create_timer(remaining).timeout
 	is_attacking = false
 	
+func _try_deal_damage() -> void:
+	var target = player_finder.player
+	print("target: ", target)
+	if target == null:
+		print("test")
+		return
+
+	# Compare horizontal distance only
+	var self_pos = Vector3(global_position.x, 0.0, global_position.z)
+	var target_pos = Vector3(target.global_position.x, 0.0, target.global_position.z)
+	var dist = self_pos.distance_to(target_pos)
+
+	if dist <= attack_range:
+		if target.has_method("apply_damage"):
+			target.apply_damage(damage_amount)
+			print("Skeleton attacked for: ", damage_amount)
+		elif target.has_method("take_damage"):
+			target.take_damage(damage_amount)
+			print("Sk")
+		else:
+			print("Skeleton attack: target has no damage method")
 func _return_to_roaming() -> void:
 	is_attacking = false
 	is_taunting = false
@@ -221,56 +259,118 @@ func _return_to_roaming() -> void:
 	# Switch animation to walking immediately
 	state_machine.travel(Idle_Anim)
 
-# --------------------
+# # --------------------
 # HP / Death Logic
 # --------------------
+
 
 func apply_damage(amount: float) -> void:
 	current_hp -= amount
 	print("Enemy hit! HP:", current_hp)
-
-	if current_hp <= 0:
+	
+	# Play hit animation
+	if animation_tree and state_machine:
+		state_machine.travel(Hit_Anim, true)
+	
+	if current_hp <= 0.0:
 		_die()
+
+func take_damage(amount: float) -> void:
+	# Alias for other scripts
+	apply_damage(amount)
 
 func _die() -> void:
 	print("Skeleton died!")
 
-	# Disable further movement or actions
+	# Stop all behavior
 	is_wandering = false
 	is_taunting = false
 	is_attacking = false
+	velocity = Vector3.ZERO
 
-	# Enable ragdoll or physics simulation here
+	# Play death animation first
+	if animation_tree and state_machine:
+		animation_player.stop()
+		animation_player.play("Death_C_Skeletons")
+		await get_tree().create_timer(1.0).timeout  # Wait for animation to start
+		print("Played death animation")
+
+	# Activate ragdoll after animation
+	print("Attempting ragdoll")
 	enable_ragdoll()
-
-	# Optionally, play a death animation here
-	state_machine.travel("Die_Anim")  # You can create a "Die_Anim" if you have one
-
+	print("Finished Attempting ragdoll")
+	
+	set_physics_process(false)
+	set_process(false)
 # --------------------
 # Ragdoll Enable/Disable
 # --------------------
 
 func enable_ragdoll() -> void:
-	# Ensure ragdoll is enabled only upon death
-	if ragdoll is PhysicalBoneSimulator3D:
-		ragdoll.set_physics_process(true)  # Enable physics processing for ragdoll parts
-		ragdoll.active = true  # Activate ragdoll simulator (this is necessary for it to work)
-		ragdoll.visible = true  # Make ragdoll visible
-	
-	# Apply initial forces if necessary (e.g., gravity)
-	for part in ragdoll.get_children():
-		if part is PhysicalBone3D:
-			part.linear_velocity = Vector3.ZERO  # Stop any prior velocity from affecting the bones
-			part.angular_velocity = Vector3.ZERO  # Stop angular movement immediately
+	# Stop animations and disable character movement
+	if animation_tree:
+		animation_tree.active = false
 
-			# Optionally, apply a small impulse for natural motion (optional)
-			# part.apply_impulse(Vector3.ZERO, Vector3(0, -5, 0))  # Example to gently move them down
+	collision_layer = 2
+	collision_mask = 1
+
+
+	if ragdoll == null:
+		print("Ragdoll node is missing!")
+		return
+
+	var simulator: PhysicalBoneSimulator3D = null
+	if ragdoll is PhysicalBoneSimulator3D:
+		simulator = ragdoll
+		print("TTTTTT")
+	else:
+		simulator = ragdoll.get_node_or_null("PhysicalBoneSimulator3D")
+
+	if simulator != null:
+		# Activate the simulator first
+		simulator.active = true
+		simulator.visible = true
+		simulator.set_physics_process(true)
+
+		# Apply current velocity to bones for a natural fall
+		await get_tree().process_frame  # Wait a physics frame to ensure bones are ready
+		for part in simulator.get_children():
+			if part is PhysicalBone3D:
+				part.linear_velocity = velocity
+				part.angular_velocity = Vector3.ZERO
+	else:
+		# If no simulator, enable physical bones directly
+		for part in ragdoll.get_children():
+			if part is PhysicalBone3D:
+				part.linear_velocity = velocity
+				part.angular_velocity = Vector3.ZERO
 
 func disable_ragdoll() -> void:
-	# Disable ragdoll physics before activation on death
-	if ragdoll != null and ragdoll is PhysicalBoneSimulator3D:
-		ragdoll.set_physics_process(false)
-		ragdoll.active = false  # Deactivate ragdoll simulator to stop physics processing
-		ragdoll.visible = false  # Hide ragdoll
+	# Turn off ragdoll physics
+	if ragdoll == null:
+		print("Ragdoll node is missing!")
+		return
+
+	var simulator: PhysicalBoneSimulator3D = null
+	if ragdoll is PhysicalBoneSimulator3D:
+		simulator = ragdoll
 	else:
-		print("Ragdoll node is not assigned or invalid!")
+		simulator = ragdoll.get_node_or_null("PhysicalBoneSimulator3D")
+
+	if simulator != null:
+		simulator.active = false
+		simulator.visible = false
+		simulator.set_physics_process(false)
+	else:
+		for part in ragdoll.get_children():
+			if part is PhysicalBone3D:
+				part.linear_velocity = Vector3.ZERO
+				part.angular_velocity = Vector3.ZERO
+
+	# Restore animation and collision for reuse
+	if animation_tree:
+		animation_tree.active = true
+	collision_layer = _orig_collision_layer
+	collision_mask = _orig_collision_mask
+	set_physics_process(true)
+	set_process(true)
