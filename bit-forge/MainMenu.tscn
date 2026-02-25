@@ -141,19 +141,16 @@ text = "Quit"
 label_settings = SubResource("LabelSettings_eiy7p")
 horizontal_alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="mainMenu"]
-layout_mode = 2
-
-[node name="Book" type="Sprite2D" parent="mainMenu"]
+[node name="Book" type="Sprite2D" parent="."]
 position = Vector2(1024, 136.00002)
 scale = Vector2(11.891892, 2.3636367)
 texture = ExtResource("2_eiy7p")
 region_enabled = true
 region_rect = Rect2(9, 1, 74, 88)
 
-[node name="Ff6403f373b32b6Dfc8b1Bc8e2Adebc0" type="Sprite2D" parent="mainMenu/Book"]
+[node name="Ff6403f373b32b6Dfc8b1Bc8e2Adebc0" type="Sprite2D" parent="Book"]
 position = Vector2(-7.6293945e-06, -7.6293945e-06)
 scale = Vector2(0.084090896, 0.42307684)
 texture = ExtResource("4_qoqlk")
 
-[node name="ShaderGlobalsOverride" type="ShaderGlobalsOverride" parent="mainMenu/Book/Ff6403f373b32b6Dfc8b1Bc8e2Adebc0"]
+[node name="ShaderGlobalsOverride" type="ShaderGlobalsOverride" parent="Book/Ff6403f373b32b6Dfc8b1Bc8e2Adebc0"]
