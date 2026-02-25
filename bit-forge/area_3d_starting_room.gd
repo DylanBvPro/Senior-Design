@@ -1,6 +1,6 @@
 extends Area3D
 
-@export var scene_to_load: PackedScene = preload("res://starting_room.tscn")
+@export var scene_to_load: PackedScene = preload("res://assets/sceanes/demo_prebuild.tscn")
 
 func _ready():
 	body_entered.connect(_on_body_entered)

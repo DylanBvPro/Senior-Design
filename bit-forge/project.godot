@@ -35,17 +35,27 @@ Shortcuts/density_decrement=Object(Shortcut,"resource_local_to_scene":false,"res
 [application]
 
 config/name="BitForge"
-run/main_scene="uid://ux6ydffb8bhs"
+run/main_scene="uid://c2e56yt0dltv0"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 SimpleGrass="*res://addons/simplegrasstextured/singleton.tscn"
+Messenger="*res://messenger.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/asset_placer/plugin.cfg", "res://addons/simplegrasstextured/plugin.cfg")
+enabled=PackedStringArray("res://addons/asset_placer/plugin.cfg", "res://addons/godot_state_charts/plugin.cfg", "res://addons/simplegrasstextured/plugin.cfg")
+
+[global_group]
+
+player=""
 
 [input]
 
@@ -104,6 +114,10 @@ MOUSE_BUTTON_RIGHT={
 [physics]
 
 3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
 
 [shader_globals]
 

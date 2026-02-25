@@ -5,6 +5,8 @@
 
 extends CharacterBody3D
 
+class_name Player
+
 @export_group("Stats")
 @export var max_hp: float = 100.0
 @export var max_armor: float = 50.0
@@ -98,6 +100,7 @@ var is_crouching: bool = false
 var normal_collider_height: float
 var normal_camera_height: Vector3
 
+
 ## IMPORTANT REFERENCES
 @onready var head: Node3D = $Head
 @onready var collider: CollisionShape3D = $Collider
@@ -106,8 +109,9 @@ var normal_camera_height: Vector3
 @onready var health_bar: ProgressBar = $"Head/Camera3D/HealthUI/HpBar"
 @onready var health_label: Label = $"Head/Camera3D/HealthUI/HpBar/HpLabel"
 @onready var sword_hitbox: Area3D = $"Rig/Skeleton3D/handslot_r/1H_Sword/Sword HitBox"
+@onready var interact:RayCast3D = $Head/Camera3D/RayCast3D
 
-
+var focusedObject: Interactable
 
 func _ready() -> void:
 	add_to_group("player")
@@ -174,9 +178,48 @@ func _unhandled_input(event: InputEvent) -> void:
 			enable_freefly()
 		else:
 			disable_freefly()
+func find_interactable_root(node: Node) -> Node:
+	while node != null:
+		if node.name == "chest_lid" and node.get_parent().name == "chest":
+			return node.get_parent()  # return the chest root
+		if node is Interactable:
+			return node
+		node = node.get_parent()
+	return null
+func find_interactable(node: Node) -> Interactable:
+	while node != null:
+		if node is Interactable:
+			return node
+		node = node.get_parent()
+	return null
 
+func _process(_delta):
+	if interact.is_colliding():
+		var collider = interact.get_collider()
+		var object = find_interactable(collider)
+
+		if object != null:
+			if focusedObject != object:
+				if focusedObject != null:
+					focusedObject.toggleOutline()
+
+				focusedObject = object
+				focusedObject.toggleOutline()
+				Messenger.SHOW_INTERACT_MESSAGE.emit(focusedObject.getInteractMessage(self))
+		else:
+			_clear_focus()
+	else:
+		_clear_focus()
+
+func _clear_focus():
+	if focusedObject != null:
+		focusedObject.toggleOutline()
+		Messenger.CLEAR_INTERACT_MESSAGE.emit()
+		focusedObject = null
+
+		
 func _physics_process(delta: float) -> void:
-	# If freeflying, handle freefly and nothing else
+	
 	if can_freefly and freeflying:
 		var input_dir := Input.get_vector(input_left, input_right, input_forward, input_back)
 		var motion := (head.global_basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()

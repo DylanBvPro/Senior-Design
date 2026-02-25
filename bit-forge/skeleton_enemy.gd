@@ -15,7 +15,6 @@ extends CharacterBody3D
 # Animation state names (AnimationTree)
 @export var Spawn_Anim: String = "Spawn_Ground_Skeletons"
 @export var Idle_Anim: String = "Idle_B"
-@export var Walk_Anim: String = "Walking_A"
 @export var Run_Anim: String = "Running_C"
 @export var Taunt_Anim: String = "Taunt"
 @export var Attack_Anim: String = "Unarmed_Melee_Attack_Punch_A"
@@ -26,7 +25,7 @@ extends CharacterBody3D
 @export var attack_anim_duration: float = 0.9
 @export var attack_hit_time: float = 0.45
 
-@export var idle_time_range: Vector2 = Vector2(2.5, 9.5)
+
 
 # --------------------
 # Node References
@@ -37,23 +36,18 @@ extends CharacterBody3D
 @onready var state_machine: AnimationNodeStateMachinePlayback = \
 	animation_tree.get("parameters/playback") as AnimationNodeStateMachinePlayback
 
-@onready var free_roam: FreeRoamMovement = $FreeRoam
 @onready var player_finder: PlayerFinder = $PlayerFinder
 @onready var nav_region: NavigationRegion3D = $"../../NavigationRegion3D"
-@onready var ragdoll: Node = $Rig/Skeleton3D/Ragdoll  # Assuming the skeleton's ragdoll parts are a child node of the skeleton
 
 # --------------------
 # Internal State
 # --------------------
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var is_wandering: bool = false
 var is_taunting: bool = false
 var is_attacking: bool = false
+var is_spawning: bool = false
 var _is_in_idle: bool = false
-var _idle_timer: Timer = null
-var _orig_collision_layer: int = 1
-var _orig_collision_mask: int = 1
 
 # --------------------
 # Lifecycle
@@ -62,22 +56,12 @@ var _orig_collision_mask: int = 1
 var current_hp: float = max_hp
 
 func _ready() -> void:
-	animation_tree.active = false
-	_orig_collision_layer = collision_layer
-	_orig_collision_mask = collision_mask
-
-	# Save original collision layers so we can restore after ragdoll
-	# Initially disable ragdoll physics
-	disable_ragdoll()
+	animation_tree.active = true
 
 	# Forward tuning vars to PlayerFinder
 	player_finder.detection_distance = detection_distance
 	player_finder.pursue_distance = pursue_distance
 	player_finder.taunt_chance = taunt_chance
-	
-	# Connect FreeRoam signals (stops and starts)
-	free_roam.connect("stopped", Callable(self, "_idle"))
-	free_roam.connect("started_moving", Callable(self, "_start_wandering"))
 
 	_play_spawn_animation()
 
@@ -85,24 +69,22 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	# If attacking, block all other movement
-	if not is_attacking:
+	# Keep the skeleton stationary until spawn animation is complete
+	if is_spawning:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		move_and_slide()
+		return
+
+	# If no player detected, always idle
+	if player_finder.player == null:
+		_idle()
+	elif not is_attacking:
 		var result = player_finder.update_player_logic(delta)
 		
 		match result.state:
 			"NO_PLAYER":
-				# Interrupt idle if needed
-				if _is_in_idle and _idle_timer:
-					_idle_timer.stop()
-					_is_in_idle = false
-
-				# Stop running immediately
-				if state_machine.get_current_node() == Run_Anim:
-					state_machine.travel(Idle_Anim, true)  # true = reset instantly
-
-				# Start roaming logic
-				is_wandering = true
-				_handle_roaming(delta)
+				_idle()
 
 			"TAUNT":
 				_handle_taunt()
@@ -113,6 +95,7 @@ func _physics_process(delta: float) -> void:
 			"ATTACK":
 				_handle_attack()
 	else:
+		_track_player_while_attacking()
 		# Zero horizontal movement while attacking
 		velocity.x = 0
 		velocity.z = 0
@@ -124,16 +107,25 @@ func _physics_process(delta: float) -> void:
 # --------------------
 
 func _play_spawn_animation() -> void:
+	is_spawning = true
 	state_machine.travel(Spawn_Anim)
-	await get_tree().create_timer(1.8).timeout
+	var spawn_duration := _get_animation_length(Spawn_Anim, 1.8)
+	await get_tree().create_timer(spawn_duration).timeout
+	is_spawning = false
 	_idle()
+
+func _get_animation_length(animation_name: String, fallback: float) -> float:
+	if animation_player and animation_player.has_animation(animation_name):
+		var anim := animation_player.get_animation(animation_name)
+		if anim:
+			return max(anim.length, 0.01)
+	return fallback
 
 func _idle() -> void:
 	if _is_in_idle:
 		return
 	_is_in_idle = true
 	
-	is_wandering = false
 	is_taunting = false
 	is_attacking = false
 
@@ -141,35 +133,11 @@ func _idle() -> void:
 	velocity.z = 0.0
 
 	state_machine.travel(Idle_Anim)
-
-	var idle_time := randf_range(idle_time_range.x, idle_time_range.y)
-	await get_tree().create_timer(idle_time).timeout
-	
 	_is_in_idle = false
-	is_wandering = true
-	state_machine.travel(Walk_Anim)
 
 # --------------------
 # Behavior Handlers
 # --------------------
-
-func _handle_roaming(delta: float) -> void:
-	if _is_in_idle or not is_wandering:
-		velocity.x = 0.0
-		velocity.z = 0.0
-		return
-
-	var dir := free_roam.update_roaming(delta)
-
-	if dir.length() > 0.01:
-		dir = dir.normalized()
-		velocity.x = dir.x * move_speed
-		velocity.z = dir.z * move_speed
-		look_at(global_position + dir, Vector3.UP)
-	else:
-		velocity.x = 0.0
-		velocity.z = 0.0
-
 
 func _handle_taunt() -> void:
 	if is_taunting:
@@ -217,21 +185,43 @@ func _handle_attack() -> void:
 	velocity.x = 0.0
 	velocity.z = 0.0
 	state_machine.travel(Attack_Anim)
+	await get_tree().process_frame
+
+	if not _is_attack_animation_active():
+		is_attacking = false
+		return
 
 	# Wait until the attack's hit frame, then try to deal damage
 	await get_tree().create_timer(attack_hit_time).timeout
-	_try_deal_damage()
+	if _is_attack_animation_active():
+		_try_deal_damage()
 
 	# Wait the remainder of the attack animation before allowing other actions
 	var remaining: float = max(0.0, attack_anim_duration - attack_hit_time)
 	await get_tree().create_timer(remaining).timeout
 	is_attacking = false
+
+func _track_player_while_attacking() -> void:
+	var target := player_finder.player
+	if target == null:
+		return
+
+	var dir := target.global_position - global_position
+	dir.y = 0.0
+	if dir.length() > 0.01:
+		look_at(global_position + dir.normalized(), Vector3.UP)
+
+func _is_attack_animation_active() -> bool:
+	if state_machine == null:
+		return false
+	return state_machine.get_current_node() == Attack_Anim
 	
 func _try_deal_damage() -> void:
+	if not _is_attack_animation_active():
+		return
+
 	var target = player_finder.player
-	print("target: ", target)
 	if target == null:
-		print("test")
 		return
 
 	# Compare horizontal distance only
@@ -242,21 +232,16 @@ func _try_deal_damage() -> void:
 	if dist <= attack_range:
 		if target.has_method("apply_damage"):
 			target.apply_damage(damage_amount)
-			print("Skeleton attacked for: ", damage_amount)
 		elif target.has_method("take_damage"):
 			target.take_damage(damage_amount)
-			print("Sk")
-		else:
-			print("Skeleton attack: target has no damage method")
 func _return_to_roaming() -> void:
 	is_attacking = false
 	is_taunting = false
-	is_wandering = true
 	
 	# Make sure the skeleton is not idling
 	_is_in_idle = false
 	
-	# Switch animation to walking immediately
+	# Switch animation to idle immediately
 	state_machine.travel(Idle_Anim)
 
 # # --------------------
@@ -280,97 +265,19 @@ func take_damage(amount: float) -> void:
 	apply_damage(amount)
 
 func _die() -> void:
-	print("Skeleton died!")
-
 	# Stop all behavior
-	is_wandering = false
 	is_taunting = false
 	is_attacking = false
 	velocity = Vector3.ZERO
 
 	# Play death animation first
 	if animation_tree and state_machine:
-		animation_player.stop()
-		animation_player.play("Death_C_Skeletons")
-		await get_tree().create_timer(1.0).timeout  # Wait for animation to start
-		print("Played death animation")
+		state_machine.travel(Death_Anim, true)
 
-	# Activate ragdoll after animation
-	print("Attempting ragdoll")
-	enable_ragdoll()
-	print("Finished Attempting ragdoll")
+	var death_duration := _get_animation_length(Death_Anim, 1.6)
+	await get_tree().create_timer(death_duration).timeout
+	collision_layer = 0
+	collision_mask = 0
 	
 	set_physics_process(false)
 	set_process(false)
-# --------------------
-# Ragdoll Enable/Disable
-# --------------------
-
-func enable_ragdoll() -> void:
-	# Stop animations and disable character movement
-	if animation_tree:
-		animation_tree.active = false
-
-	collision_layer = 2
-	collision_mask = 1
-
-
-	if ragdoll == null:
-		print("Ragdoll node is missing!")
-		return
-
-	var simulator: PhysicalBoneSimulator3D = null
-	if ragdoll is PhysicalBoneSimulator3D:
-		simulator = ragdoll
-		print("TTTTTT")
-	else:
-		simulator = ragdoll.get_node_or_null("PhysicalBoneSimulator3D")
-
-	if simulator != null:
-		# Activate the simulator first
-		simulator.active = true
-		simulator.visible = true
-		simulator.set_physics_process(true)
-
-		# Apply current velocity to bones for a natural fall
-		await get_tree().process_frame  # Wait a physics frame to ensure bones are ready
-		for part in simulator.get_children():
-			if part is PhysicalBone3D:
-				part.linear_velocity = velocity
-				part.angular_velocity = Vector3.ZERO
-	else:
-		# If no simulator, enable physical bones directly
-		for part in ragdoll.get_children():
-			if part is PhysicalBone3D:
-				part.linear_velocity = velocity
-				part.angular_velocity = Vector3.ZERO
-
-func disable_ragdoll() -> void:
-	# Turn off ragdoll physics
-	if ragdoll == null:
-		print("Ragdoll node is missing!")
-		return
-
-	var simulator: PhysicalBoneSimulator3D = null
-	if ragdoll is PhysicalBoneSimulator3D:
-		simulator = ragdoll
-	else:
-		simulator = ragdoll.get_node_or_null("PhysicalBoneSimulator3D")
-
-	if simulator != null:
-		simulator.active = false
-		simulator.visible = false
-		simulator.set_physics_process(false)
-	else:
-		for part in ragdoll.get_children():
-			if part is PhysicalBone3D:
-				part.linear_velocity = Vector3.ZERO
-				part.angular_velocity = Vector3.ZERO
-
-	# Restore animation and collision for reuse
-	if animation_tree:
-		animation_tree.active = true
-	collision_layer = _orig_collision_layer
-	collision_mask = _orig_collision_mask
-	set_physics_process(true)
-	set_process(true)

@@ -1,20 +1,21 @@
-[gd_scene load_steps=26 format=4 uid="uid://ux6ydffb8bhs"]
+[gd_scene load_steps=27 format=4 uid="uid://ux6ydffb8bhs"]
 
-[ext_resource type="Texture2D" uid="uid://d254mvopdt5uy" path="res://models/Finished Models/seamless-pattern-ground-with-stones-brown-soil-texture-for-wallpaper-illustration-backdrop-land-background-for-graphic-design-game-vector.jpg" id="1_2cqfq"]
-[ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="1_ig7tw"]
-[ext_resource type="Texture2D" uid="uid://caqiq0awc8dga" path="res://pngtree-full-blood-moon-png-image_6539918.png" id="1_vivmo"]
-[ext_resource type="PackedScene" uid="uid://c1n0oqsgkluwu" path="res://models/barrel_small.gltf" id="2_0xm2m"]
-[ext_resource type="PackedScene" uid="uid://qbpawvhcv27g" path="res://small_barrel.tscn" id="3_h2yge"]
-[ext_resource type="PackedScene" uid="uid://8i1xpo346nfx" path="res://models/wall_doorway.gltf" id="5_7mycd"]
-[ext_resource type="PackedScene" uid="uid://d3fxdotb6ixmq" path="res://models/Finished Models/wall.tscn" id="5_lquwl"]
-[ext_resource type="MeshLibrary" uid="uid://pqodp2rcgtb2" path="res://Grave-1.tres" id="9_kek77"]
-[ext_resource type="Shader" uid="uid://bi3o8elbtqoni" path="res://addons/simplegrasstextured/shaders/grass.gdshader" id="10_dg77c"]
-[ext_resource type="Texture2D" uid="uid://c4ggdp0kg5wjk" path="res://addons/simplegrasstextured/textures/grassbushcc008.png" id="11_ycdy4"]
-[ext_resource type="Script" uid="uid://2juaclm8gc1n" path="res://addons/simplegrasstextured/grass.gd" id="12_w48qg"]
-[ext_resource type="Script" uid="uid://crddxox2qo1uv" path="res://area_3d_starting_room.gd" id="12_ycdy4"]
-[ext_resource type="Script" uid="uid://c3hkhfh2od6qf" path="res://area_3d_demo_room.gd" id="13_w48qg"]
-[ext_resource type="PackedScene" uid="uid://bfe7ahbjg7j0t" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/wall_doorway.glb" id="13_ycdy4"]
-[ext_resource type="PackedScene" uid="uid://bdvl7l57y1mok" path="res://fire.tscn" id="14_w48qg"]
+[ext_resource type="Texture2D" uid="uid://caqiq0awc8dga" path="res://pngtree-full-blood-moon-png-image_6539918.png" id="1_4fke8"]
+[ext_resource type="Texture2D" uid="uid://d254mvopdt5uy" path="res://models/Finished Models/seamless-pattern-ground-with-stones-brown-soil-texture-for-wallpaper-illustration-backdrop-land-background-for-graphic-design-game-vector.jpg" id="2_8md4d"]
+[ext_resource type="PackedScene" uid="uid://b5iaxt3mxc1d1" path="res://lantern.tscn" id="3_f0duh"]
+[ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="4_g53ss"]
+[ext_resource type="PackedScene" uid="uid://c1n0oqsgkluwu" path="res://models/barrel_small.gltf" id="5_sta61"]
+[ext_resource type="PackedScene" uid="uid://qbpawvhcv27g" path="res://small_barrel.tscn" id="6_tqnwp"]
+[ext_resource type="PackedScene" uid="uid://d3fxdotb6ixmq" path="res://models/Finished Models/wall.tscn" id="7_ue4w1"]
+[ext_resource type="PackedScene" uid="uid://8i1xpo346nfx" path="res://models/wall_doorway.gltf" id="8_vpt56"]
+[ext_resource type="MeshLibrary" uid="uid://pqodp2rcgtb2" path="res://Grave-1.tres" id="9_njxur"]
+[ext_resource type="Shader" uid="uid://bi3o8elbtqoni" path="res://addons/simplegrasstextured/shaders/grass.gdshader" id="10_p2tw3"]
+[ext_resource type="Texture2D" uid="uid://c4ggdp0kg5wjk" path="res://addons/simplegrasstextured/textures/grassbushcc008.png" id="11_eg1fs"]
+[ext_resource type="Script" uid="uid://2juaclm8gc1n" path="res://addons/simplegrasstextured/grass.gd" id="12_5rjh2"]
+[ext_resource type="PackedScene" uid="uid://bfe7ahbjg7j0t" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/wall_doorway.glb" id="13_tptd0"]
+[ext_resource type="Script" uid="uid://crddxox2qo1uv" path="res://area_3d_starting_room.gd" id="14_t3ghq"]
+[ext_resource type="Script" uid="uid://c3hkhfh2od6qf" path="res://area_3d_demo_room.gd" id="15_hbhug"]
+[ext_resource type="PackedScene" uid="uid://bdvl7l57y1mok" path="res://fire.tscn" id="16_jllar"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ig7tw"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -29,33 +30,34 @@ sky = SubResource("Sky_0xm2m")
 tonemap_mode = 2
 glow_enabled = true
 fog_enabled = true
+fog_light_energy = 5.95
 volumetric_fog_enabled = true
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_w48qg"]
 transparency = 1
 blend_mode = 3
 cull_mode = 1
-roughness_texture = ExtResource("1_vivmo")
+roughness_texture = ExtResource("1_4fke8")
 emission_enabled = true
 emission = Color(1, 0, 0, 1)
 emission_energy_multiplier = 102.8
-emission_texture = ExtResource("1_vivmo")
+emission_texture = ExtResource("1_4fke8")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2cqfq"]
-albedo_texture = ExtResource("1_vivmo")
+albedo_texture = ExtResource("1_4fke8")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yaehf"]
 albedo_color = Color(0.25882354, 0.45882353, 0.25882354, 1)
-albedo_texture = ExtResource("1_2cqfq")
+albedo_texture = ExtResource("2_8md4d")
 uv1_triplanar = true
 uv1_world_triplanar = true
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vivmo"]
 resource_local_to_scene = true
 render_priority = 0
-shader = ExtResource("10_dg77c")
+shader = ExtResource("10_p2tw3")
 shader_parameter/albedo = Color(0.3403393, 0.34033933, 0.3403393, 1)
-shader_parameter/texture_albedo = ExtResource("11_ycdy4")
+shader_parameter/texture_albedo = ExtResource("11_eg1fs")
 shader_parameter/texture_frames = Vector2(1, 1)
 shader_parameter/light_mode = 1
 shader_parameter/alpha_scissor_threshold = 0.5
@@ -122,55 +124,58 @@ transform = Transform3D(200, 0, 0, 0, 1, 0, 0, 0, 200, 0.07946396, 2.861023e-06,
 material_override = SubResource("StandardMaterial3D_yaehf")
 use_collision = true
 
-[node name="ProtoController" parent="." instance=ExtResource("1_ig7tw")]
+[node name="lantern" parent="." instance=ExtResource("3_f0duh")]
+transform = Transform3D(0.014852173, 0, 0.9998897, 0, 1, 0, -0.9998897, 0, 0.014852173, 14.5435915, 1, -0.07030458)
+
+[node name="ProtoController" parent="." instance=ExtResource("4_g53ss")]
 transform = Transform3D(0.014852173, 0, 0.9998897, 0, 1, 0, -0.9998897, 0, 0.014852173, 19.186155, 1, -2.9016647)
 can_sprint = true
 
-[node name="barrel_small2" parent="." instance=ExtResource("2_0xm2m")]
+[node name="barrel_small2" parent="." instance=ExtResource("5_sta61")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0.5340495, -3)
 
-[node name="Barrel" parent="." instance=ExtResource("3_h2yge")]
+[node name="Barrel" parent="." instance=ExtResource("6_tqnwp")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.455278, 0.513711, -5.72174)
 
-[node name="wall3" parent="." instance=ExtResource("5_lquwl")]
+[node name="wall3" parent="." instance=ExtResource("7_ue4w1")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -10.491762, 0.5000042, -13.940391)
 
-[node name="wall" parent="wall3" instance=ExtResource("5_lquwl")]
+[node name="wall" parent="wall3" instance=ExtResource("7_ue4w1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.000001, 0, 0)
 
-[node name="wall" parent="wall3/wall" instance=ExtResource("5_lquwl")]
+[node name="wall" parent="wall3/wall" instance=ExtResource("7_ue4w1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.000001, 0, 0)
 
-[node name="wall" parent="wall3/wall/wall" instance=ExtResource("5_lquwl")]
+[node name="wall" parent="wall3/wall/wall" instance=ExtResource("7_ue4w1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.000001, 0, 0)
 
-[node name="wall3" parent="wall3" instance=ExtResource("5_lquwl")]
+[node name="wall3" parent="wall3" instance=ExtResource("7_ue4w1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 0)
 
-[node name="wall" parent="wall3/wall3" instance=ExtResource("5_lquwl")]
+[node name="wall" parent="wall3/wall3" instance=ExtResource("7_ue4w1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.000001, 0, 0)
 
-[node name="wall" parent="wall3/wall3/wall" instance=ExtResource("5_lquwl")]
+[node name="wall" parent="wall3/wall3/wall" instance=ExtResource("7_ue4w1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.000001, 0, 0)
 
-[node name="wall" parent="wall3/wall3/wall/wall" instance=ExtResource("5_lquwl")]
+[node name="wall" parent="wall3/wall3/wall/wall" instance=ExtResource("7_ue4w1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.000001, 0, 0)
 
-[node name="wall_doorway2" parent="." instance=ExtResource("5_7mycd")]
+[node name="wall_doorway2" parent="." instance=ExtResource("8_vpt56")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, -7)
 
 [node name="GridMap" type="GridMap" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-mesh_library = ExtResource("9_kek77")
+mesh_library = ExtResource("9_njxur")
 data = {
 "cells": PackedInt32Array(4, 65534, 1048578, 5, 65533, 1048582, 1, 65525, 1048576, 10, 65534, 1048577, 10, 0, 1048579, 10, 65532, 1048579, 10, 65530, 1048579, 10, 2, 1048579, 10, 4, 1048579, 10, 65528, 1048579, 9, 65527, 655363, 7, 65527, 655363, 5, 65527, 655363, 3, 65527, 655363, 1, 65527, 655363, 9, 5, 655363, 7, 5, 655363, 5, 5, 655363, 3, 5, 655363, 1, 5, 655363, 65535, 5, 655363, 65535, 65527, 655363, 65534, 65528, 1048579, 65534, 65530, 1048579, 65534, 4, 1048579, 65534, 2, 1048579, 65534, 0, 1048579, 65534, 65532, 1441795, 8, 65534, 1048590, 4, 3, 1048585, 6, 65534, 1048588, 4, 65531, 1048584, 2, 65531, 1048584, 4, 65529, 1048584, 4, 1, 1048584, 2, 1, 1048586, 2, 3, 1048584, 2, 65529, 1048585, 7, 65534, 1048589, 9, 65534, 1048591, 0, 65534, 17, 65534, 65534, 1048579, 65535, 65534, 1441792, 65533, 7, 1441813, 2, 8, 1441813, 65534, 12, 1441813, 7, 12, 1441813, 65532, 2, 1441813, 65532, 65531, 1441813, 6, 65522, 1441813, 65534, 65524, 1441813, 3, 65522, 1441813, 10, 65524, 1441813, 65531, 65525, 1441813, 0, 10, 1441813, 6, 7, 1441814, 3, 12, 1441814, 10, 9, 1441814, 5, 10, 1441814, 65532, 10, 1441814, 0, 7, 1441814, 65532, 65535, 1441814, 0, 65523, 1441814, 4, 65524, 1441814, 7, 65524, 1441814, 15, 7, 1441814, 20, 65533, 1441814, 8, 8, 1441814, 12, 7, 1441814, 4, 8, 1441815, 3, 10, 1441815, 8, 10, 1441815, 2, 65524, 1441815, 65532, 65527, 1441815, 65532, 65533, 1441815, 65532, 5, 1441815, 7, 65525, 1441815, 7, 65520, 1441815, 12, 9, 1441815, 14, 6, 1441815, 12, 65524, 1441815, 16, 65526, 1441813, 17, 3, 1441813, 16, 65530, 1441813, 16, 0, 1441813, 15, 3, 1441814, 19, 65527, 1441814, 19, 65529, 1441814, 18, 65533, 1441813, 8, 65528, 1441807, 6, 65531, 1048591, 9, 65531, 15, 9, 3, 15, 6, 1, 15, 6, 3, 15, 0, 65530, 15)
 }
 
 [node name="SimpleGrassTextured" type="MultiMeshInstance3D" parent="."]
 multimesh = SubResource("MultiMesh_dg77c")
-script = ExtResource("12_w48qg")
+script = ExtResource("12_5rjh2")
 albedo = Color(0.3403393, 0.34033933, 0.3403393, 1)
-texture_albedo = ExtResource("11_ycdy4")
+texture_albedo = ExtResource("11_eg1fs")
 scale_var = -2.255
 sgt_radius = 1.5
 sgt_density = 18
@@ -188,12 +193,12 @@ sgt_tool_shape = {
 metadata/_custom_type_script = "uid://2juaclm8gc1n"
 metadata/SimpleGrassTextured = "2.0.5"
 
-[node name="wall_doorway3" parent="." instance=ExtResource("13_ycdy4")]
+[node name="wall_doorway3" parent="." instance=ExtResource("13_tptd0")]
 transform = Transform3D(-3.934025e-08, 0, 0.9, 0, 0.9, 0, -0.9, 0, -3.934025e-08, 11.16865, 0.8400029, -3.0123036)
 
 [node name="Area3D_starting_room" type="Area3D" parent="wall_doorway3"]
 transform = Transform3D(-4.8568207e-08, 0, 1.1111112, 0, 1.1111112, 0, -1.1111112, 0, -4.8568207e-08, -4.458116, 0.17777455, 12.034835)
-script = ExtResource("12_ycdy4")
+script = ExtResource("14_t3ghq")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="wall_doorway3/Area3D_starting_room"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 1.1982079, 4)
@@ -201,11 +206,12 @@ shape = SubResource("BoxShape3D_ycdy4")
 
 [node name="Area3D_demo_room" type="Area3D" parent="."]
 transform = Transform3D(1.4570463e-07, 0, -1.1111112, 0, 1.1111112, 0, 1.1111112, 0, 1.4570463e-07, 2.1247807, 1.1777745, -11.034831)
-script = ExtResource("13_w48qg")
+script = ExtResource("15_hbhug")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D_demo_room"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.2005053, 1.1982079, 1)
 shape = SubResource("BoxShape3D_ycdy4")
 
-[node name="fireNode" parent="." instance=ExtResource("14_w48qg")]
+[node name="fireNode" parent="." instance=ExtResource("16_jllar")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 3, -4)
+visible = false
