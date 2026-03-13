@@ -1,6 +1,6 @@
 [gd_scene load_steps=25 format=4 uid="uid://dtrcewgyp8y4u"]
 
-[ext_resource type="MeshLibrary" uid="uid://cxsr16aay51f" path="res://simplemeshlib6.tres" id="1_7dc86"]
+[ext_resource type="MeshLibrary" uid="uid://cxsr16aay51f" path="res://assets/needToBeSorted/simplemeshlib6.tres" id="1_7dc86"]
 [ext_resource type="Texture2D" uid="uid://bon776gu03tv5" path="res://addons/kaykit_dungeon_remastered/Assets/obj/dungeon_texture.png" id="2_quoaf"]
 [ext_resource type="PackedScene" uid="uid://218ce1js6u1s" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/rubble_half.gltf.glb" id="3_g2x2y"]
 [ext_resource type="PackedScene" uid="uid://bshr5587k4ah1" path="res://lantern_hanging_2.tscn" id="3_jpr6i"]

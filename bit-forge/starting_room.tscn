@@ -1,12 +1,12 @@
 [gd_scene load_steps=15 format=3 uid="uid://c5glndwsmdmgi"]
 
-[ext_resource type="MeshLibrary" uid="uid://b5otnvts5whc5" path="res://simplemeshlib3.tres" id="1_gybe8"]
+[ext_resource type="MeshLibrary" uid="uid://b5otnvts5whc5" path="res://assets/needToBeSorted/simplemeshlib3.tres" id="1_gybe8"]
 [ext_resource type="PackedScene" uid="uid://bdvl7l57y1mok" path="res://fire.tscn" id="2_3gsno"]
 [ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="2_gybe8"]
-[ext_resource type="MeshLibrary" uid="uid://dxtwnwd8k4i8f" path="res://simplemeshlib3333.tres" id="3_10ia8"]
+[ext_resource type="MeshLibrary" uid="uid://dxtwnwd8k4i8f" path="res://assets/needToBeSorted/simplemeshlib3333.tres" id="3_10ia8"]
 [ext_resource type="PackedScene" uid="uid://cel7evpf510jn" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/torch_mounted.gltf.glb" id="4_mlujb"]
 [ext_resource type="Shader" uid="uid://cjh14klv47u5k" path="res://tourchfire.tres" id="5_bnu7n"]
-[ext_resource type="Texture2D" uid="uid://b6d76bdlwpno3" path="res://models/purepng.com-fire-flamefire-flameseffectsfirehotflameheat-221519330402x1lug.png" id="6_l5di8"]
+[ext_resource type="Texture2D" uid="uid://b6d76bdlwpno3" path="res://assets/oldAssets/purepng.com-fire-flamefire-flameseffectsfirehotflameheat-221519330402x1lug.png" id="6_l5di8"]
 [ext_resource type="PackedScene" uid="uid://bshr5587k4ah1" path="res://lantern_hanging_2.tscn" id="8_jvkvm"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_gybe8"]

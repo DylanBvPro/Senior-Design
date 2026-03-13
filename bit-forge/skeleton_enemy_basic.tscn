@@ -1,6 +1,6 @@
 [gd_scene load_steps=19 format=3 uid="uid://dsjcsa6uqdqor"]
 
-[ext_resource type="PackedScene" uid="uid://gd0pr4tjgxl1" path="res://models/Finished Models/Skeleton_Minion - Copy.glb" id="1_jagi4"]
+[ext_resource type="PackedScene" uid="uid://gd0pr4tjgxl1" path="res://assets/needToBeSorted/models/Finished Models/Skeleton_Minion - Copy.glb" id="1_jagi4"]
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_jagi4"]
 animation = &"Idle_B"

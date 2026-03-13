@@ -1,7 +1,7 @@
 [gd_scene load_steps=23 format=4 uid="uid://c2e56yt0dltv0"]
 
 [ext_resource type="PackedScene" uid="uid://dese0rxb067w7" path="res://empty_openable_chest.tscn" id="1_66pqt"]
-[ext_resource type="MeshLibrary" uid="uid://dv7dkfcpdwhjh" path="res://simplemeshlib5.tres" id="1_ychtm"]
+[ext_resource type="MeshLibrary" uid="uid://dv7dkfcpdwhjh" path="res://assets/needToBeSorted/simplemeshlib5.tres" id="1_ychtm"]
 [ext_resource type="PackedScene" uid="uid://bshr5587k4ah1" path="res://lantern_hanging_2.tscn" id="2_cc2c2"]
 [ext_resource type="PackedScene" uid="uid://bbkhdha3l0374" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/table_long_broken.gltf.glb" id="5_occ4w"]
 [ext_resource type="PackedScene" uid="uid://dvjpw6ix1wkxw" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/sword_shield_broken.gltf.glb" id="6_rijwq"]

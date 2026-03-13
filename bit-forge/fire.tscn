@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3 uid="uid://bdvl7l57y1mok"]
 
-[ext_resource type="Texture2D" uid="uid://diev3t82gdo04" path="res://simple-white-circle-and-drop-shadow-png.png" id="1_2pqqt"]
-[ext_resource type="Texture2D" uid="uid://b6d76bdlwpno3" path="res://models/purepng.com-fire-flamefire-flameseffectsfirehotflameheat-221519330402x1lug.png" id="2_5ltu8"]
+[ext_resource type="Texture2D" uid="uid://diev3t82gdo04" path="res://assets/oldAssets/simple-white-circle-and-drop-shadow-png.png" id="1_2pqqt"]
+[ext_resource type="Texture2D" uid="uid://b6d76bdlwpno3" path="res://assets/oldAssets/purepng.com-fire-flamefire-flameseffectsfirehotflameheat-221519330402x1lug.png" id="2_5ltu8"]
 
 [sub_resource type="Curve" id="Curve_2pqqt"]
 _data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.43939394, 0.82022476), 0.0, 0.0, 0, 0]
