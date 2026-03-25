@@ -1,7 +1,6 @@
-[gd_scene load_steps=9 format=3 uid="uid://dl8fmfoe0qjyf"]
+[gd_scene load_steps=8 format=3 uid="uid://dl8fmfoe0qjyf"]
 
 [ext_resource type="Texture2D" uid="uid://dwax5w6k1g8qk" path="res://assets/2dsimulation/textures/Dungeon_Tileset.png" id="1_vllxc"]
-[ext_resource type="PackedScene" uid="uid://xarv80jqip85" path="res://assets/2dsimulation/characters/player_placeholder.tscn" id="2_b32n1"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_vllxc"]
 texture = ExtResource("1_vllxc")
@@ -170,6 +169,3 @@ position = Vector2(16, 136)
 shape = SubResource("RectangleShape2D_h6bom")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-
-[node name="Player" parent="." instance=ExtResource("2_b32n1")]
-position = Vector2(92, 110)
