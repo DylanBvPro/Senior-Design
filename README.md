@@ -1,3 +1,7 @@
+![Project Status](https://img.shields.io/badge/Project%20Status:-Ongoing-%23c8a951?style=for-the-badge)
+![Bug Status](https://img.shields.io/badge/Bug%20Status:-Major%20Issues-red?style=for-the-badge)
+![Maintenance](https://img.shields.io/badge/Maintained:-N/A-lightgrey?style=for-the-badge)
+
 ## About Me
 
 **Dylan Bok**  
@@ -67,11 +71,5 @@ Feel free to reach out for collaboration, networking, or just to chat about tech
 - Strengthened technical and interpersonal skills in a fast-paced academic environment  
 - **Technical Skills:** Endpoint Maintenance, Software Installation  
 - **Non-Technical Skills:** Adaptability, multitasking, user-focused service  
-
-## Project Sought
-
-I'm currently seeking a project that aligns with my passion for data-driven development and engaging technical challenges. Ideally, I'd love to work on something involving **market information, stock tracking, or large-scale data analysis**—projects that require thoughtful architecture and real-time insights.
-
-I'm also open to **game development** or other creative ventures that blend storytelling, interactivity, and technical depth. What matters most to me is that the project feels **compelling and aligned with my interests**, whether it's solving complex problems, building immersive systems, or exploring new technologies.
 
 If it’s innovative, data-rich, or creatively challenging—I’m in.
