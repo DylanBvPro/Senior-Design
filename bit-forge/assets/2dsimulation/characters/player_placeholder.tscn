@@ -1,9 +1,13 @@
-[gd_scene load_steps=4 format=3 uid="uid://xarv80jqip85"]
+[gd_scene load_steps=5 format=3 uid="uid://xarv80jqip85"]
 
 [ext_resource type="Script" uid="uid://svvkd35b24ct" path="res://assets/2dsimulation/scripts/character_body_2d.gd" id="1_3crjo"]
 [ext_resource type="Texture2D" uid="uid://buovi73470k6k" path="res://assets/textures/download.jpg" id="1_drxm5"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_3crjo"]
+radius = 7.28011
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_x8oc8"]
+radius = 11.0
 
 [node name="Player" type="Node2D"]
 
@@ -16,7 +20,17 @@ shape = SubResource("CircleShape2D_3crjo")
 [node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]
 
 [node name="RayCast2D" type="RayCast2D" parent="CharacterBody2D"]
+collide_with_areas = true
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
 scale = Vector2(0.018229088, 0.018027667)
 texture = ExtResource("1_drxm5")
+
+[node name="hitbox" type="CollisionShape2D" parent="CharacterBody2D"]
+shape = SubResource("CircleShape2D_x8oc8")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+avoidance_enabled = true
+debug_enabled = true
+debug_use_custom = true
+debug_path_custom_point_size = 50.0

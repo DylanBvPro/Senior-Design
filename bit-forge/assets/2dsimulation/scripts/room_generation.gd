@@ -5,8 +5,9 @@ extends Node2D
 @export var end_rooms_folder := "res://assets/2dsimulation/sceanes/end_room/"
 @export var deadend_rooms_folder := "res://assets/2dsimulation/sceanes/deadend_rooms/"
 @export var player_scene: PackedScene = preload("res://assets/2dsimulation/characters/player_placeholder.tscn")
+@export var enemy_scene: PackedScene = preload("res://assets/2dsimulation/characters/enemy_touch_2d.tscn")
 @export var demo_scene_to_reload: PackedScene = preload("res://assets/2dsimulation/sceanes/demo_test_sceanes.tscn")
-@export var max_rooms := 3
+@export var max_rooms := 2
 @export_range(1, 10, 1) var dungeon_complexity := 5
 @export var debug_generation := true
 @export var door_connection_gap := 16.0
@@ -33,6 +34,7 @@ var generation_timed_out := false
 var random_rooms_placed_count := 0
 var is_regenerating_layout := false
 var spawned_player: Node = null
+var spawned_enemy: Node = null
 
 func _ready():
 	load_rooms()
@@ -164,6 +166,7 @@ func generate_dungeon_dynamic(total_rooms: int, complexity_override: int = -1):
 		if has_required_terminals and random_count >= min_required_rooms:
 			reached_target = true
 			spawn_or_move_player_to_starting_room()
+			spawn_enemy_in_layout()
 			setup_exit_triggers()
 			debug_log("Reached complexity target on attempt " + str(attempt + 1))
 			break
@@ -273,6 +276,40 @@ func find_character_body(root: Node) -> CharacterBody2D:
 			return child
 
 	return null
+
+
+func spawn_enemy_in_layout():
+	if enemy_scene == null:
+		debug_log("Enemy scene is not set; skipping enemy spawn.")
+		return
+
+	if is_instance_valid(spawned_enemy):
+		spawned_enemy.queue_free()
+		spawned_enemy = null
+
+	var spawn_room: Node2D = ending_room
+	if spawn_room == null and !placed_rooms.is_empty() and placed_rooms.back() is Node2D:
+		spawn_room = placed_rooms.back()
+
+	if spawn_room == null:
+		return
+
+	var spawn_position = spawn_room.global_position
+	var room_rect = get_room_rect(spawn_room)
+	if room_rect.size != Vector2.ZERO:
+		spawn_position = room_rect.get_center()
+
+	var enemy_instance = enemy_scene.instantiate()
+	add_child(enemy_instance)
+	spawned_enemy = enemy_instance
+
+	if enemy_instance is Node2D:
+		(enemy_instance as Node2D).global_position = spawn_position
+
+	if enemy_instance is Node and !enemy_instance.is_in_group("enemies"):
+		enemy_instance.add_to_group("enemies")
+
+	debug_log("Spawned enemy in generated layout.")
 
 
 func find_collision_shape(node: Node) -> CollisionShape2D:
@@ -486,6 +523,10 @@ func clear_generated_rooms():
 	for room in placed_rooms:
 		if is_instance_valid(room):
 			room.queue_free()
+
+	if is_instance_valid(spawned_enemy):
+		spawned_enemy.queue_free()
+		spawned_enemy = null
 
 	placed_rooms.clear()
 	open_connections.clear()

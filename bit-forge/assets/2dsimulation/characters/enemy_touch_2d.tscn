@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://dsmh4d85t41gx"]
+
+[ext_resource type="Script" uid="uid://damo6v48kob47" path="res://assets/2dsimulation/scripts/enemy_touch_2d.gd" id="1_enemy"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_37qua"]
+radius = 12.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_enemy"]
+radius = 8.0
+
+[node name="EnemyTouch2D" type="CharacterBody2D"]
+script = ExtResource("1_enemy")
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="hitbox" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("CircleShape2D_37qua")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_enemy")
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+color = Color(0.9, 0.2, 0.2, 1)
+polygon = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
