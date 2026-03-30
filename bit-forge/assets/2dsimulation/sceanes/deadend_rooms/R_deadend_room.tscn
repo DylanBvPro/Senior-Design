@@ -16,7 +16,7 @@ disable_mode = 1
 position = Vector2(-59, -26)
 tile_set = ExtResource("1_57jdl")
 format = 2
-layer_0/tile_data = PackedInt32Array(196608, 0, 0, 393216, 0, 4, 196609, 65536, 0, 196610, 262144, 0, 262145, 196608, 2, 327681, 196608, 2, 393217, 65536, 4, 393218, 65536, 4, 262146, 196608, 2, 327682, 196608, 2, 262144, 0, 1, 327680, 0, 2)
+layer_0/tile_data = PackedInt32Array(196608, 0, 0, 393216, 0, 4, 196609, 65536, 0, 196610, 262144, 0, 262145, 196608, 2, 327681, 196608, 2, 393217, 65536, 4, 393218, 65536, 4, 262146, 131072, 1, 327682, 131072, 3, 262144, 0, 1, 327680, 0, 2)
 
 [node name="Door1" type="StaticBody2D" parent="StaticBody2D/TileMap"]
 position = Vector2(80, 0)
@@ -28,4 +28,7 @@ physics_material_override = SubResource("PhysicsMaterial_1x4ph")
 position = Vector2(-40, 80)
 shape = SubResource("RectangleShape2D_1x4ph")
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="TileMap2" type="TileMap" parent="StaticBody2D/TileMap"]
+tile_set = ExtResource("1_57jdl")
+format = 2
+layer_0/tile_data = PackedInt32Array(327681, 589824, 5, 262145, 589824, 4)

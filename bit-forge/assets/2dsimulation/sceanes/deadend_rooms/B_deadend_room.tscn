@@ -16,7 +16,12 @@ disable_mode = 1
 position = Vector2(-59, -26)
 tile_set = ExtResource("1_ouopt")
 format = 2
-layer_0/tile_data = PackedInt32Array(327684, 196608, 2, 327685, 196608, 2, 262150, 327680, 0, 262147, 0, 0, 327683, 0, 1, 327686, 327680, 1, 393219, 0, 3, 393222, 327680, 3, 393221, 196608, 2, 393220, 196608, 2, 262148, 131072, 0, 262149, 131072, 0)
+layer_0/tile_data = PackedInt32Array(327684, 196608, 2, 327685, 196608, 2, 262150, 327680, 0, 262147, 0, 0, 327683, 0, 1, 327686, 327680, 1, 393219, 0, 3, 393222, 327680, 3, 393221, 262144, 2, 393220, 65536, 2, 262148, 131072, 0, 262149, 131072, 0)
+
+[node name="TileMap2" type="TileMap" parent="StaticBody2D/TileMap"]
+tile_set = ExtResource("1_ouopt")
+format = 2
+layer_0/tile_data = PackedInt32Array(327684, 262144, 6)
 
 [node name="Door1" type="StaticBody2D" parent="StaticBody2D/TileMap"]
 position = Vector2(80, 0)
@@ -27,5 +32,3 @@ physics_material_override = SubResource("PhysicsMaterial_1x4ph")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D/TileMap/Door1"]
 position = Vector2(0, 104)
 shape = SubResource("RectangleShape2D_1x4ph")
-
-[node name="Camera2D" type="Camera2D" parent="."]

@@ -1,8 +1,9 @@
-[gd_scene load_steps=8 format=3 uid="uid://bmxhyjkk0k41m"]
+[gd_scene load_steps=9 format=3 uid="uid://bmxhyjkk0k41m"]
 
 [ext_resource type="Texture2D" uid="uid://d3bntl61lbb0" path="res://assets/oldAssets/book.png" id="2_eiy7p"]
 [ext_resource type="Texture2D" uid="uid://dsg6jn511uwup" path="res://assets/oldAssets/book - Copy.png" id="2_h7a2f"]
 [ext_resource type="Script" uid="uid://ccswvlfmp8tov" path="res://assets/scripts/UI/start_button.gd" id="3_h7a2f"]
+[ext_resource type="Script" uid="uid://c5i2kqinhg32t" path="res://assets/scripts/UI/load_2d_sim.gd" id="4_iwfq2"]
 [ext_resource type="Texture2D" uid="uid://bxyg2ivrr3dna" path="res://assets/textures/ff6403f373b32b6dfc8b1bc8e2adebc0.png" id="4_qoqlk"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_h7a2f"]
@@ -103,6 +104,7 @@ size_flags_vertical = 4
 theme_override_styles/normal = SubResource("StyleBoxTexture_h7a2f")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_qoqlk")
 theme_override_styles/hover = SubResource("StyleBoxTexture_qoqlk")
+script = ExtResource("4_iwfq2")
 
 [node name="Label" type="Label" parent="mainMenu/baseMenu/TextureRect/MarginContainer/VBoxContainer/continueButton"]
 layout_mode = 1
@@ -114,7 +116,7 @@ offset_top = -31.0
 offset_bottom = 32.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "Continue"
+text = "Load 2D Sim"
 label_settings = SubResource("LabelSettings_eiy7p")
 horizontal_alignment = 1
 

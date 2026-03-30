@@ -4,3 +4,5 @@
 
 [node name="demo_test_sceanes" type="Node2D"]
 script = ExtResource("1_syigc")
+max_rooms = 5
+dungeon_complexity = 9
