@@ -1,6 +1,8 @@
 class_name SimpleEnemy
 extends "res://assets/scripts/enemies/basic_enemy.gd"
 
+signal killed_by_player(enemy: Node)
+
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var state_chart: StateChart = $StateChart
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -21,6 +23,7 @@ const HIT_STUN_DURATION: float = 0.5
 const HIT_IFRAME_DURATION: float = 1.0
 const HIT_KNOCKBACK_SPEED: float = 10.4
 const HIT_KNOCKBACK_DAMPING: float = 14.0
+const ATTACK_HIT_TIME_RATIO: float = 0.30
 
 func _ready() -> void:
 	super._ready()
@@ -109,7 +112,7 @@ func _run_death_despawn_sequence() -> void:
 	queue_free()
 
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, source: Node = null) -> void:
 	if is_dead:
 		return
 	if invulnerability_time_remaining > 0.0:
@@ -121,14 +124,16 @@ func take_damage(amount: float) -> void:
 	invulnerability_time_remaining = HIT_IFRAME_DURATION
 	_update_health_bar()
 	if current_health <= 0.0:
+		if source and source.is_in_group("player"):
+			emit_signal("killed_by_player", self)
 		_on_died()
 		return
 
 	_apply_hit_reaction()
 
 
-func apply_damage(amount: float) -> void:
-	take_damage(amount)
+func apply_damage(amount: float, source: Node = null) -> void:
+	take_damage(amount, source)
 	
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	if is_dead:
@@ -189,9 +194,10 @@ func apply_attack_damage() -> void:
 	# Call this method from an animation callback at the desired frame
 	if is_dead:
 		return
+	damage_applied_this_attack = true
 	if target and target in get_tree().get_nodes_in_group("player"):
 		if target.has_method("take_damage"):
-			target.take_damage(enemy_info.attack_damage)
+			target.take_damage(enemy_info.attack_damage, self)
 
 
 func _on_attack_state_physics_processing(delta: float) -> void:
@@ -211,17 +217,19 @@ func _on_attack_state_physics_processing(delta: float) -> void:
 			state_chart.send_event("toFollow")
 			return
 	
-	# Apply damage 0.5 seconds before animation ends
+	# Apply damage near the actual impact frame for better hit-sync.
 	if animation_player.is_playing() and not damage_applied_this_attack:
 		var current_anim = animation_player.get_current_animation()
 		if current_anim == enemy_info.attack_animation:
 			var anim = animation_player.get_animation(current_anim)
+			if anim == null:
+				return
 			var anim_length = anim.length
 			var current_pos = animation_player.get_current_animation_position()
-			
-			if current_pos >= anim_length - 0.5:
+			var hit_time = anim_length * ATTACK_HIT_TIME_RATIO
+
+			if current_pos >= hit_time:
 				apply_attack_damage()
-				damage_applied_this_attack = true
 			return
 	
 	# Wait for attack animation to finish before deciding to follow or go idle

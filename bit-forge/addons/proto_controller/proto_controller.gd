@@ -24,15 +24,11 @@ var weapon_damage: float = 10.0
 var weapon_fire_rate: float = 0.5  # seconds between shots
 var weapon_last_shot_time: float = 0.0
 
-@export_group("Sprint Stamina")
+@export_group("Dash")
 
-@export var max_sprint_time := 2.0          # seconds of sprint
-
-@export var sprint_recharge_rate := 1.2     # seconds per second
-
-@export var sprint_recharge_delay := 1.0    # delay before recharge starts
-
-@export var sprint_tap_cost := 0.2  # Amount of sprint time consumed per click	
+@export var dash_duration := 0.18       # how long a dash lasts
+@export var dash_cooldown := 1.0        # seconds before dash can be used again
+@export var max_dash_charges := 3       # total dash charges
 
 
 @export_group("Crouch")
@@ -64,9 +60,21 @@ var weapon_last_shot_time: float = 0.0
 ## Speed of jump.
 @export var jump_velocity : float = 5.5
 ## How fast do we run?
-@export var sprint_speed : float = 20.0
+@export var sprint_speed : float = 40.0
 ## How fast do we freefly?
 @export var freefly_speed : float = 25.0
+@export var damage_knockback_speed : float = 7.0
+@export var damage_knockback_decay : float = 18.0
+
+@export_group("Camera FX")
+@export var camera_bob_moving_amount: float = 0.05
+@export var camera_bob_idle_amount: float = 0.015
+@export var camera_bob_moving_speed: float = 10.0
+@export var camera_bob_idle_speed: float = 2.0
+@export var damage_shake_duration: float = 0.15
+@export var damage_shake_amount: float = 0.06
+@export var camera_lean_max_degrees: float = 3.0
+@export var camera_lean_response_speed: float = 8.0
 
 @export_group("Input Actions")
 ## Name of Input Action to move Left.
@@ -91,10 +99,19 @@ var look_rotation : Vector2
 var move_speed : float = 0.0
 var freeflying : bool = false
 
-var sprint_time := max_sprint_time
-var sprint_recharge_timer := 0.0
-var is_sprinting := false
-var sprint_exhausted := false
+var dash_time_left := 0.0
+var is_dashing := false
+var dash_direction := Vector3.ZERO
+var dash_recharge_index := -1
+var dash_charges: Array[float] = []
+var combo_speed_multiplier: float = 1.0
+var damage_knockback_velocity := Vector3.ZERO
+var camera_bob_time: float = 0.0
+var damage_shake_time_left: float = 0.0
+var damage_shake_strength: float = 0.0
+var camera_base_position: Vector3 = Vector3.ZERO
+var camera_base_rotation: Vector3 = Vector3.ZERO
+var camera_lean_current: float = 0.0
 
 var is_crouching: bool = false
 var normal_collider_height: float
@@ -103,8 +120,9 @@ var normal_camera_height: Vector3
 
 ## IMPORTANT REFERENCES
 @onready var head: Node3D = $Head
+@onready var camera_3d: Camera3D = $Head/Camera3D
 @onready var collider: CollisionShape3D = $Collider
-@onready var sprint_bar: ProgressBar = $"Head/Camera3D/SprintUI/SprintBar"
+@onready var sprint_bar_root: CanvasLayer = $"Head/Camera3D/SprintUI"
 @onready var weapon_anim: AnimationPlayer = $"AnimationPlayer"
 @onready var health_bar: ProgressBar = $"Head/Camera3D/HealthUI/HpBar"
 @onready var health_label: Label = $"Head/Camera3D/HealthUI/HpBar/HpLabel"
@@ -118,10 +136,17 @@ func _ready() -> void:
 	check_input_mappings()
 	look_rotation.y = rotation.y
 	look_rotation.x = head.rotation.x
-	sprint_time = max_sprint_time
+	move_speed = base_speed * combo_speed_multiplier
 	sword_hitbox.monitoring = true
 	sword_hitbox.monitorable = true
 	sword_hitbox.body_entered.connect(_on_sword_body_entered)
+	if camera_3d:
+		camera_base_position = camera_3d.position
+		camera_base_rotation = camera_3d.rotation
+	dash_charges = []
+	for i in range(max_dash_charges):
+		dash_charges.append(1.0)
+	_configure_dash_bars()
 
 	
 	normal_collider_height = collider.shape.height
@@ -137,7 +162,9 @@ func _on_sword_body_entered(body: Node):
 	print("body: ", body)
 	if body.has_method("apply_damage"):
 		print("Hit enemy:", body.name)
-		body.apply_damage(weapon_damage)
+		body.apply_damage(weapon_damage, self)
+	elif body.has_method("take_damage"):
+		body.take_damage(weapon_damage, self)
 		
 func _enable_sword_hitbox():
 	if not sword_hitbox:
@@ -193,7 +220,9 @@ func find_interactable(node: Node) -> Interactable:
 		node = node.get_parent()
 	return null
 
-func _process(_delta):
+func _process(delta):
+	_update_camera_effects(delta)
+
 	if interact.is_colliding():
 		var collider = interact.get_collider()
 		var object = find_interactable(collider)
@@ -219,6 +248,12 @@ func _clear_focus():
 
 		
 func _physics_process(delta: float) -> void:
+	_update_dash_recharge(delta)
+
+	if is_dashing:
+		dash_time_left -= delta
+		if dash_time_left <= 0.0:
+			is_dashing = false
 	
 	if can_freefly and freeflying:
 		var input_dir := Input.get_vector(input_left, input_right, input_forward, input_back)
@@ -237,42 +272,25 @@ func _physics_process(delta: float) -> void:
 		if Input.is_action_just_pressed(input_jump) and is_on_floor():
 			velocity.y = jump_velocity
 
-	# Modify speed based on sprinting
-	if can_sprint and Input.is_action_pressed(input_sprint) and sprint_recharged() and not is_crouching:
-		
-		if not sprint_exhausted:
-			# Start sprinting
-			is_sprinting = true
-			move_speed = sprint_speed
-			sprint_time -= delta
-			sprint_time = max(sprint_time, 0.0)
-				
-		if sprint_time <= 0.0:
-			sprint_exhausted = true
-			is_sprinting = false
-			move_speed = base_speed
-			sprint_recharge_timer = sprint_recharge_delay
-			
-	else:
-		is_sprinting = false
-		move_speed = base_speed
-	# Recharge sprint
-	if not is_sprinting:
-		if sprint_recharge_timer > 0.0:
-			sprint_recharge_timer -= delta
-		else:
-			if sprint_exhausted or sprint_time < max_sprint_time:
-				sprint_time += sprint_recharge_rate * delta
-				sprint_time = min(sprint_time, max_sprint_time)
-			# Reset exhaustion once fully recharged
-				if sprint_exhausted and sprint_time >= max_sprint_time:
-					sprint_exhausted = false
+	# Trigger dash on sprint input if at least one full charge is available.
+	if can_sprint and Input.is_action_just_pressed(input_sprint) and not is_crouching:
+		if _consume_dash_charge():
+			is_dashing = true
+			dash_time_left = dash_duration
+			var dash_input := Input.get_vector(input_left, input_right, input_forward, input_back)
+			dash_direction = (transform.basis * Vector3(dash_input.x, 0, dash_input.y)).normalized()
+			if dash_direction == Vector3.ZERO:
+				dash_direction = -transform.basis.z.normalized()
 
 	# Apply desired movement to velocity
 	if can_move:
 		var input_dir := Input.get_vector(input_left, input_right, input_forward, input_back)
 		var move_dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-		if move_dir:
+		if is_dashing:
+			var dash_speed := sprint_speed * combo_speed_multiplier
+			velocity.x = dash_direction.x * dash_speed
+			velocity.z = dash_direction.z * dash_speed
+		elif move_dir:
 			velocity.x = move_dir.x * move_speed
 			velocity.z = move_dir.z * move_speed
 		else:
@@ -281,12 +299,18 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = 0
 		velocity.y = 0
+
+	if damage_knockback_velocity.length_squared() > 0.0001:
+		velocity.x += damage_knockback_velocity.x
+		velocity.z += damage_knockback_velocity.z
+		damage_knockback_velocity = damage_knockback_velocity.move_toward(Vector3.ZERO, damage_knockback_decay * delta)
+	else:
+		damage_knockback_velocity = Vector3.ZERO
 	
 	# Use velocity to actually move
 	move_and_slide()
 
-	if sprint_bar:
-		sprint_bar.value = (sprint_time / max_sprint_time) * 100.0
+	_update_dash_bars()
 		
 		# Handle crouch
 	if can_crouch:
@@ -294,30 +318,142 @@ func _physics_process(delta: float) -> void:
 			if not is_crouching:
 				is_crouching = true
 				move_speed = crouch_speed
-				is_sprinting = false  # stop sprinting
+				is_dashing = false
+				dash_time_left = 0.0
 				collider.shape.height = crouch_height
 				head.position = Vector3(head.position.x, normal_camera_height.y + crouch_camera_offset, head.position.z)
 
 		else:
 			if is_crouching:
 				is_crouching = false
-				move_speed = base_speed
+				move_speed = base_speed * combo_speed_multiplier
 				collider.shape.height = normal_collider_height
 				head.position = normal_camera_height
+
+
+func set_combo_speed_multiplier(multiplier: float) -> void:
+	combo_speed_multiplier = max(multiplier, 1.0)
+	if is_crouching:
+		move_speed = crouch_speed
+	else:
+		move_speed = base_speed * combo_speed_multiplier
+
+
+func add_dash_charge(amount: int = 1) -> void:
+	if amount <= 0 or dash_charges.is_empty():
+		return
+
+	for i in range(amount):
+		var refill_index := _find_highest_missing_dash_charge()
+		if refill_index == -1:
+			break
+
+		dash_charges[refill_index] = 1.0
+		if dash_recharge_index == refill_index:
+			dash_recharge_index = -1
+
+	_update_dash_bars()
+
+
+func _find_highest_missing_dash_charge() -> int:
+	for i in range(dash_charges.size() - 1, -1, -1):
+		if dash_charges[i] < 1.0:
+			return i
+	return -1
+
+
+func _configure_dash_bars() -> void:
+	if not sprint_bar_root:
+		return
+
+	for bar in _get_dash_bars_in_ui_order():
+		bar.min_value = 0.0
+		bar.max_value = 100.0
+
+	_update_dash_bars()
+
+
+func _update_dash_bars() -> void:
+	if not sprint_bar_root:
+		return
+
+	var bars := _get_dash_bars_in_ui_order()
+
+	for i in range(bars.size()):
+		if i < dash_charges.size():
+			bars[i].value = clamp(dash_charges[i] * 100.0, 0.0, 100.0)
+
+
+func _get_dash_bars_in_ui_order() -> Array[TextureProgressBar]:
+	var bars: Array[TextureProgressBar] = []
+	if not sprint_bar_root:
+		return bars
+
+	for child in sprint_bar_root.get_children():
+		if child is TextureProgressBar and child.name.begins_with("TextureProgressBar"):
+			bars.append(child)
+
+	return bars
+
+
+func _consume_dash_charge() -> bool:
+	for i in range(dash_charges.size() - 1, -1, -1):
+		if dash_charges[i] >= 1.0:
+			# If a charge is currently recharging, cancel that progress.
+			if dash_recharge_index >= 0 and dash_recharge_index < dash_charges.size() and dash_charges[dash_recharge_index] < 1.0:
+				dash_charges[dash_recharge_index] = 0.0
+			dash_recharge_index = -1
+
+			dash_charges[i] = 0.0
+			return true
+
+	return false
+
+
+func _update_dash_recharge(delta: float) -> void:
+	if dash_charges.is_empty():
+		return
+
+	if dash_recharge_index == -1:
+		dash_recharge_index = _find_next_recharge_index()
+
+	if dash_recharge_index == -1:
+		return
+
+	if dash_cooldown <= 0.0:
+		dash_charges[dash_recharge_index] = 1.0
+		dash_recharge_index = -1
+		return
+
+	dash_charges[dash_recharge_index] = min(dash_charges[dash_recharge_index] + (delta / dash_cooldown), 1.0)
+	if dash_charges[dash_recharge_index] >= 1.0:
+		dash_recharge_index = -1
+
+
+func _find_next_recharge_index() -> int:
+	# Recharge one dash at a time, always starting from TextureProgressBar1.
+	for i in range(dash_charges.size()):
+		if dash_charges[i] < 1.0:
+			return i
+	return -1
 
 
 # --------------------
 # Health Functions
 # --------------------
-func apply_damage(amount: float) -> void:
+func apply_damage(amount: float, source: Node = null) -> void:
 	var final_damage = max(amount - current_armor, 0)
+	if final_damage > 0.0:
+		_play_hurt_animation()
+		_trigger_damage_camera_shake()
+		_apply_damage_knockback(source)
 	current_hp = clamp(current_hp - final_damage, 0, max_hp)
 	_update_health_bar()
 	if current_hp <= 0:
 		_die()
 
-func take_damage(amount: float) -> void:
-	apply_damage(amount)
+func take_damage(amount: float, source: Node = null) -> void:
+	apply_damage(amount, source)
 
 func heal(amount: float) -> void:
 	current_hp = clamp(current_hp + amount, 0, max_hp)
@@ -338,6 +474,73 @@ func _die() -> void:
 	# Example:
 	# get_tree().reload_current_scene()
 	# or queue_free()
+
+
+func _apply_damage_knockback(source: Node = null) -> void:
+	var away_dir := Vector3.ZERO
+	if source is Node3D:
+		away_dir = global_position - source.global_position
+	away_dir.y = 0.0
+	if away_dir.length_squared() <= 0.0001:
+		away_dir = transform.basis.z
+	away_dir = away_dir.normalized()
+	damage_knockback_velocity = away_dir * damage_knockback_speed
+
+
+func _play_hurt_animation() -> void:
+	if not weapon_anim:
+		return
+
+	if weapon_anim.has_animation("Hit_B"):
+		weapon_anim.play("Hit_B")
+	elif weapon_anim.has_animation("Hit_A"):
+		weapon_anim.play("Hit_A")
+	elif weapon_anim.has_animation("Block_Hit"):
+		weapon_anim.play("Block_Hit")
+
+
+func _trigger_damage_camera_shake() -> void:
+	damage_shake_time_left = damage_shake_duration
+	damage_shake_strength = damage_shake_amount
+
+
+func _update_camera_effects(delta: float) -> void:
+	if not camera_3d:
+		return
+
+	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
+	var speed_reference := max(base_speed * combo_speed_multiplier, 0.001)
+	var moving_factor := clamp(horizontal_speed / speed_reference, 0.0, 1.0)
+
+	var bob_speed := lerp(camera_bob_idle_speed, camera_bob_moving_speed, moving_factor)
+	var bob_amount := lerp(camera_bob_idle_amount, camera_bob_moving_amount, moving_factor)
+
+	camera_bob_time += delta * bob_speed
+	var bob_offset := Vector3(
+		cos(camera_bob_time * 0.5) * bob_amount * 0.35,
+		sin(camera_bob_time) * bob_amount,
+		0.0
+	)
+
+	var shake_offset := Vector3.ZERO
+	if damage_shake_time_left > 0.0:
+		damage_shake_time_left = max(damage_shake_time_left - delta, 0.0)
+		var tm := damage_shake_time_left / maxf(damage_shake_duration, 0.001)
+		var strength := damage_shake_strength * tm
+		shake_offset = Vector3(
+			randf_range(-strength, strength),
+			randf_range(-strength, strength),
+			randf_range(-strength, strength) * 0.4
+		)
+
+	var local_horizontal_velocity := transform.basis.inverse() * Vector3(velocity.x, 0.0, velocity.z)
+	var lateral_speed := local_horizontal_velocity.x
+	var lateral_ratio := clamp(lateral_speed / max(move_speed, 0.001), -1.0, 1.0)
+	var lean_target := deg_to_rad(-float(camera_lean_max_degrees)) * float(lateral_ratio)
+	camera_lean_current = lerp(camera_lean_current, lean_target, clamp(delta * camera_lean_response_speed, 0.0, 1.0))
+
+	camera_3d.position = camera_base_position + bob_offset + shake_offset
+	camera_3d.rotation = Vector3(camera_base_rotation.x, camera_base_rotation.y, camera_base_rotation.z + camera_lean_current)
 
 
 ## Rotate us to look around.
@@ -371,12 +574,6 @@ func capture_mouse():
 func release_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	mouse_captured = false
-
-func sprint_recharged() -> bool:
-	# If exhausted, must fully recharge
-	if sprint_exhausted:
-		return sprint_time >= max_sprint_time
-	return sprint_recharge_timer <= 0.0
 
 func can_attack() -> bool:
 	return Time.get_ticks_msec() / 1000.0 - weapon_last_shot_time >= weapon_fire_rate

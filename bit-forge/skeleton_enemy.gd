@@ -231,9 +231,9 @@ func _try_deal_damage() -> void:
 
 	if dist <= attack_range:
 		if target.has_method("apply_damage"):
-			target.apply_damage(damage_amount)
+			target.apply_damage(damage_amount, self)
 		elif target.has_method("take_damage"):
-			target.take_damage(damage_amount)
+			target.take_damage(damage_amount, self)
 func _return_to_roaming() -> void:
 	is_attacking = false
 	is_taunting = false
