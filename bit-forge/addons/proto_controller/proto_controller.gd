@@ -316,6 +316,9 @@ func apply_damage(amount: float) -> void:
 	if current_hp <= 0:
 		_die()
 
+func take_damage(amount: float) -> void:
+	apply_damage(amount)
+
 func heal(amount: float) -> void:
 	current_hp = clamp(current_hp + amount, 0, max_hp)
 	_update_health_bar()
