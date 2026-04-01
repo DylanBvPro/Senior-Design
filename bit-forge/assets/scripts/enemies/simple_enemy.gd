@@ -10,6 +10,12 @@ signal killed_by_player(enemy: Node)
 @onready var progress_bar: ProgressBar = $SubViewport/ProgressBar
 @onready var ranged_template: Node3D = get_node_or_null("ranged")
 
+@export_range(1.0, 500.0, 1.0) var activation_distance_meters: float = 50.0
+@export_range(-1.0, 500.0, 1.0) var deactivation_distance_meters: float = -1.0
+@export_range(1.0, 500.0, 1.0) var max_follow_navigation_distance_meters: float = 40.0
+@export var navigation_path_check_interval: float = 0.5
+@export var activity_check_interval: float = 0.2
+
 var target: CharacterBody3D
 var player_in_detection: bool = false
 var time_since_last_attack: float = 0.0
@@ -24,6 +30,9 @@ var is_ranged_backpedaling: bool = false
 var last_nav_update_time: float = 0.0
 var cached_attack_range: float = 0.0
 var last_health_bar_update: float = 0.0
+var runtime_active: bool = true
+var activity_check_elapsed: float = 0.0
+var navigation_path_check_elapsed: float = 0.0
 
 const ATTACK_HIT_TIME_RATIO: float = 0.30
 const NAV_UPDATE_INTERVAL: float = 0.1  # Update pathfinding every 0.1 seconds instead of every frame
@@ -38,9 +47,64 @@ func _ready() -> void:
 	target = get_tree().get_first_node_in_group("player")
 	#print("target", target)
 	nav_agent.velocity_computed.connect(_on_velocity_computed)
+	nav_agent.avoidance_enabled = false
 	
 	if animation_player:
 		animation_player.play(enemy_info.idle_animation)
+
+	set_process(true)
+	_set_runtime_active(true)
+	_update_runtime_activity(true)
+
+
+func _process(delta: float) -> void:
+	if is_dead:
+		return
+	activity_check_elapsed += delta
+	if activity_check_elapsed < activity_check_interval:
+		return
+	_update_runtime_activity(false)
+
+
+func _update_runtime_activity(force: bool) -> void:
+	activity_check_elapsed = 0.0
+	if target == null or not is_instance_valid(target):
+		target = get_tree().get_first_node_in_group("player") as CharacterBody3D
+	if target == null:
+		_set_runtime_active(false)
+		return
+
+	var dist_sq: float = (target.global_position - global_position).length_squared()
+	var activation_dist_sq: float = activation_distance_meters * activation_distance_meters
+	var deactivate_dist: float = deactivation_distance_meters if deactivation_distance_meters > 0.0 else activation_distance_meters
+	var deactivation_dist_sq: float = deactivate_dist * deactivate_dist
+
+	var should_be_active: bool = runtime_active
+	if runtime_active:
+		# Enemy must de-render again when player leaves the deactivation range.
+		should_be_active = dist_sq <= deactivation_dist_sq
+	else:
+		# Enemy reactivates only when player is back inside activation range.
+		should_be_active = dist_sq <= activation_dist_sq
+
+	if force or should_be_active != runtime_active:
+		_set_runtime_active(should_be_active)
+
+
+func _set_runtime_active(active: bool) -> void:
+	runtime_active = active
+	visible = active or is_dead
+	set_physics_process(active or is_dead)
+	if not active and not is_dead:
+		nav_agent.velocity = Vector3.ZERO
+		velocity.x = 0.0
+		velocity.z = 0.0
+		if has_node("DetectionArea"):
+			$DetectionArea.monitoring = false
+		return
+
+	if has_node("DetectionArea") and not is_dead:
+		$DetectionArea.monitoring = true
 
 
 func _disable_hand_attachment_physics(use_left: bool = true, use_right: bool = true) -> void:
@@ -71,7 +135,8 @@ func _disable_physics_on_subtree(node: Node) -> void:
 		_disable_physics_on_subtree(child)
 	
 func _physics_process(delta: float) -> void:
-		
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if invulnerability_time_remaining > 0.0:
@@ -95,6 +160,8 @@ func on_triggered() -> void:
 
 
 func _on_idle_state_entered() -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if stun_time_remaining > 0.0:
@@ -105,6 +172,8 @@ func _on_idle_state_entered() -> void:
 
 
 func _on_follow_state_entered() -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if stun_time_remaining > 0.0:
@@ -120,6 +189,7 @@ func _on_died() -> void:
 	if is_dead:
 		return
 	is_dead = true
+	_set_runtime_active(true)
 	is_ranged_backpedaling = false
 	player_in_detection = false
 	nav_agent.velocity = Vector3.ZERO
@@ -151,6 +221,8 @@ func _run_death_despawn_sequence() -> void:
 
 
 func take_damage(amount: float, source: Node = null) -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if invulnerability_time_remaining > 0.0:
@@ -178,6 +250,8 @@ func apply_damage(amount: float, source: Node = null) -> void:
 	take_damage(amount, source)
 	
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if is_ranged_backpedaling:
@@ -186,6 +260,8 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	velocity.z = safe_velocity.z
 
 func _on_follow_state_physics_processing(delta: float) -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if stun_time_remaining > 0.0:
@@ -202,9 +278,28 @@ func _on_follow_state_physics_processing(delta: float) -> void:
 	
 	# Throttle navigation updates to reduce CPU load
 	last_nav_update_time += delta
+	navigation_path_check_elapsed += delta
 	if last_nav_update_time >= NAV_UPDATE_INTERVAL:
 		last_nav_update_time = 0.0
 		nav_agent.target_position = target.global_position
+
+		# Cheap first gate: if straight-line distance already exceeds follow range, stop.
+		if distance_to_target > max_follow_navigation_distance_meters:
+			nav_agent.velocity = Vector3.ZERO
+			velocity.x = 0.0
+			velocity.z = 0.0
+			state_chart.send_event("toIdle")
+			return
+
+		# Expensive full-path distance check runs less frequently.
+		if navigation_path_check_elapsed >= navigation_path_check_interval:
+			navigation_path_check_elapsed = 0.0
+			if _calculate_navigation_path_distance() > max_follow_navigation_distance_meters:
+				nav_agent.velocity = Vector3.ZERO
+				velocity.x = 0.0
+				velocity.z = 0.0
+				state_chart.send_event("toIdle")
+				return
 	
 	if nav_agent.is_navigation_finished():
 		nav_agent.velocity = Vector3.ZERO
@@ -218,12 +313,21 @@ func _on_follow_state_physics_processing(delta: float) -> void:
 	# Apply velocity
 	if direction.length() > 0.01:
 		nav_agent.velocity = direction * enemy_info.follow_speed
+		# When avoidance is disabled, velocity_computed may not drive movement.
+		# Apply direct movement as a fallback to prevent run-in-place behavior.
+		if not nav_agent.avoidance_enabled:
+			velocity.x = nav_agent.velocity.x
+			velocity.z = nav_agent.velocity.z
 		var target_rotation = atan2(direction.x, direction.z)
 		rotation.y = lerp_angle(rotation.y, target_rotation, 5.0 * delta)
 	else:
 		nav_agent.velocity = Vector3.ZERO
+		velocity.x = 0.0
+		velocity.z = 0.0
 
 func _on_attack_state_entered() -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if stun_time_remaining > 0.0:
@@ -246,15 +350,19 @@ func _on_attack_state_entered() -> void:
 
 func apply_attack_damage() -> void:
 	# Call this method from an animation callback at the desired frame
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	damage_applied_this_attack = true
-	if target and target in get_tree().get_nodes_in_group("player"):
+	if target and target.is_in_group("player"):
 		if target.has_method("take_damage"):
 			target.take_damage(enemy_info.attack_damage, self)
 
 
 func _on_attack_state_physics_processing(delta: float) -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if stun_time_remaining > 0.0:
@@ -312,6 +420,8 @@ func _on_attack_state_physics_processing(delta: float) -> void:
 
 
 func _on_detection_area_body_entered(body: Node3D) -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if body.is_in_group("player"):
@@ -320,6 +430,8 @@ func _on_detection_area_body_entered(body: Node3D) -> void:
 
 
 func _on_detection_area_body_exited(body: Node3D) -> void:
+	if not runtime_active:
+		return
 	if is_dead:
 		return
 	if body.is_in_group("player"):
@@ -442,3 +554,14 @@ func _spawn_ranged_projectile() -> void:
 
 	if projectile_node.has_method("launch"):
 		projectile_node.call("launch", launch_dir, enemy_info.attack_damage, self, enemy_info.projectile_speed, enemy_info.projectile_max_distance)
+
+
+func _calculate_navigation_path_distance() -> float:
+	var path: PackedVector3Array = nav_agent.get_current_navigation_path()
+	if path.size() < 2:
+		return global_position.distance_to(target.global_position) if target != null else 0.0
+
+	var total_distance: float = 0.0
+	for i in range(1, path.size()):
+		total_distance += path[i - 1].distance_to(path[i])
+	return total_distance

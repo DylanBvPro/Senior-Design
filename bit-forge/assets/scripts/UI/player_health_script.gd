@@ -1,9 +1,11 @@
 extends TextureProgressBar
 
 @export var player_path: NodePath
+@export_file("*.tscn") var graveyard_scene_path: String = "res://graveyard.tscn"
 
 var _player: Node = null
 var _hp_label: Label = null
+var _sent_to_graveyard: bool = false
 
 
 func _ready() -> void:
@@ -46,6 +48,11 @@ func _sync_from_player() -> void:
 
 	max_value = max_hp_float
 	value = current_hp_float
+
+	if current_hp_float <= 0.0 and not _sent_to_graveyard:
+		_sent_to_graveyard = true
+		if graveyard_scene_path != "":
+			get_tree().call_deferred("change_scene_to_file", graveyard_scene_path)
 
 	if _hp_label != null:
 		_hp_label.text = "%d / %d" % [int(round(current_hp_float)), int(round(max_hp_float))]
