@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://coshv8pp3j10a"]
+
+[ext_resource type="PackedScene" uid="uid://c27ksy570eg3g" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/coin.gltf.glb" id="1_o3lhk"]
+
+[node name="coin_gltf" instance=ExtResource("1_o3lhk")]
+
+[node name="coin" parent="." index="0"]
+physics_material_override = null
+gravity_scale = 0.0

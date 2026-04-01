@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://daxh1as5ublye"]
+[gd_scene load_steps=23 format=3 uid="uid://daxh1as5ublye"]
 
 [ext_resource type="Texture2D" uid="uid://d254mvopdt5uy" path="res://assets/needToBeSorted/models/Finished Models/seamless-pattern-ground-with-stones-brown-soil-texture-for-wallpaper-illustration-backdrop-land-background-for-graphic-design-game-vector.jpg" id="1_rjj1h"]
 [ext_resource type="MeshLibrary" uid="uid://dxtwnwd8k4i8f" path="res://assets/needToBeSorted/simplemeshlib3333.tres" id="1_s4c34"]
@@ -6,10 +6,17 @@
 [ext_resource type="MeshLibrary" uid="uid://pqodp2rcgtb2" path="res://Grave-1.tres" id="3_1oqip"]
 [ext_resource type="PackedScene" uid="uid://dese0rxb067w7" path="res://empty_openable_chest.tscn" id="5_ul5wj"]
 [ext_resource type="PackedScene" uid="uid://gd0pr4tjgxl1" path="res://assets/needToBeSorted/models/Finished Models/Skeleton_Minion - Copy.glb" id="6_rqywu"]
+[ext_resource type="PackedScene" uid="uid://dnlmtwhr48tf" path="res://assets/characters/Sheild_enemy.tscn" id="7_a7tk7"]
 [ext_resource type="PackedScene" uid="uid://cangmew4s5p2u" path="res://skeleton_enemy.tscn" id="7_jpn36"]
+[ext_resource type="PackedScene" uid="uid://d0lavvo1li0b0" path="res://assets/characters/Sword_enemy.tscn" id="7_uuk4k"]
+[ext_resource type="PackedScene" uid="uid://1fa7m6js7h8i" path="res://assets/characters/Spear_enemy.tscn" id="8_d4sdx"]
 [ext_resource type="PackedScene" uid="uid://b8jtnu4slasli" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/chest.glb" id="9_50cfv"]
+[ext_resource type="PackedScene" uid="uid://0sa8t2xhpu1h" path="res://assets/characters/Sword_and_sheild_enemy.tscn" id="9_avinp"]
 [ext_resource type="Script" uid="uid://du1fcps18mxcb" path="res://interact_prompt.gd" id="10_50cfv"]
-[ext_resource type="PackedScene" uid="uid://betm82nub5mou" path="res://Simple_enemy.tscn" id="11_uuk4k"]
+[ext_resource type="PackedScene" uid="uid://b4w1h8lbcttdq" path="res://assets/characters/Bow_enemy.tscn" id="10_v5nl0"]
+[ext_resource type="PackedScene" uid="uid://bt4as2ksx5y8t" path="res://assets/characters/Mage_enemy.tscn" id="11_f5d6w"]
+[ext_resource type="PackedScene" uid="uid://betm82nub5mou" path="res://assets/characters/Simple_enemy.tscn" id="11_uuk4k"]
+[ext_resource type="PackedScene" uid="uid://dbx53yqxojvk6" path="res://assets/characters/Leader_enemy.tscn" id="12_cx2rr"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_s4c34"]
 sky_horizon_color = Color(1.5513475, 1.5685976, 1.5925975, 1)
@@ -47,11 +54,14 @@ light_energy = 7.7
 shadow_enabled = true
 
 [node name="ProtoController" parent="." instance=ExtResource("2_s4c34")]
-transform = Transform3D(-0.014852151, 0, -0.9998897, 0, 1, 0, 0.9998897, 0, -0.014852151, -19.809544, 1, -3.4809)
+transform = Transform3D(-0.014852151, 0, -0.9998897, 0, 1, 0, 0.9998897, 0, -0.014852151, -24.903135, 1, 36.44785)
 can_sprint = true
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_jpn36")
+
+[node name="Mage_Enemy" parent="NavigationRegion3D" instance=ExtResource("11_f5d6w")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 72.1, 1.2, -5.7)
 
 [node name="GridMap2" type="GridMap" parent="NavigationRegion3D"]
 mesh_library = ExtResource("3_1oqip")
@@ -85,6 +95,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 5, 1)
 
 [node name="Node3D" parent="NavigationRegion3D" instance=ExtResource("5_ul5wj")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -20, 1, 8)
+
+[node name="Sheild_Enemy" parent="NavigationRegion3D" instance=ExtResource("7_a7tk7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -42, 3, -15)
+
+[node name="Spear_Enemy" parent="NavigationRegion3D" instance=ExtResource("8_d4sdx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 3, 23)
+
+[node name="Sword_And_Sheild_Enemy" parent="NavigationRegion3D" instance=ExtResource("9_avinp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 3, 43)
+
+[node name="Bow_Enemy" parent="NavigationRegion3D" instance=ExtResource("10_v5nl0")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -43.100002, 1.2, 65.8)
+
+[node name="Leader_Enemy" parent="NavigationRegion3D" instance=ExtResource("12_cx2rr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 69)
 
 [node name="Skeleton_Minion - Copy" parent="." instance=ExtResource("6_rqywu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 1, -1)
@@ -129,7 +154,10 @@ vertical_alignment = 1
 script = ExtResource("10_50cfv")
 
 [node name="Simple_Enemy" parent="." instance=ExtResource("11_uuk4k")]
-transform = Transform3D(0.17364822, 0, 0.9848077, 0, 1, 0, -0.9848077, 0, 0.17364822, -6.007327, 6.9, -1.3592541)
+transform = Transform3D(0.17364822, 0, 0.9848077, 0, 1, 0, -0.9848077, 0, 0.17364822, -7.1705894, 6.9, -35.07345)
+
+[node name="Sword_Enemy" parent="." instance=ExtResource("7_uuk4k")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 4.8, 9)
 
 [node name="Simple_Enemy2" parent="." instance=ExtResource("11_uuk4k")]
 transform = Transform3D(-0.93969256, 0, 0.3420202, 0, 1, 0, -0.3420202, 0, -0.93969256, -46.995956, 1.8000002, -29.950356)

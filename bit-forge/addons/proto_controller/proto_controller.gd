@@ -8,9 +8,9 @@ extends CharacterBody3D
 class_name Player
 
 @export_group("Stats")
-@export var max_hp: float = 100.0
+@export var max_hp: float = 1000.0
 @export var max_armor: float = 50.0
-@export var current_hp: float = 20
+@export var current_hp: float = 1000.0
 var current_armor: float = 0
 
 @export_group("Weapons")

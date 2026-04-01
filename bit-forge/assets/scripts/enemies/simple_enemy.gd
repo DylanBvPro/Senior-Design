@@ -8,6 +8,7 @@ signal killed_by_player(enemy: Node)
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var enemy_info: EnemyInfo = $EnemyInfo
 @onready var progress_bar: ProgressBar = $SubViewport/ProgressBar
+@onready var ranged_template: Node3D = get_node_or_null("ranged")
 
 var target: CharacterBody3D
 var player_in_detection: bool = false
@@ -18,17 +19,16 @@ var is_dead: bool = false
 var stun_time_remaining: float = 0.0
 var knockback_velocity: Vector3 = Vector3.ZERO
 var invulnerability_time_remaining: float = 0.0
+var current_attack_animation: StringName = StringName("")
+var is_ranged_backpedaling: bool = false
 
-const HIT_STUN_DURATION: float = 0.5
-const HIT_IFRAME_DURATION: float = 1.0
-const HIT_KNOCKBACK_SPEED: float = 10.4
-const HIT_KNOCKBACK_DAMPING: float = 14.0
 const ATTACK_HIT_TIME_RATIO: float = 0.30
 
 func _ready() -> void:
 	super._ready()
 	current_health = enemy_info.max_health
 	_update_health_bar()
+	_disable_hand_attachment_physics()
 	
 	target = get_tree().get_first_node_in_group("player")
 	#print("target", target)
@@ -36,6 +36,34 @@ func _ready() -> void:
 	
 	if animation_player:
 		animation_player.play(enemy_info.idle_animation)
+
+
+func _disable_hand_attachment_physics(use_left: bool = true, use_right: bool = true) -> void:
+	var hand_paths: Array[NodePath] = []
+	
+	if use_right:
+		hand_paths.append(NodePath("Rig/Skeleton3D/RightHand"))
+	if use_left:
+		hand_paths.append(NodePath("Rig/Skeleton3D/LeftHand"))
+
+	for hand_path in hand_paths:
+		var hand_node := get_node_or_null(hand_path)
+		if hand_node == null:
+			continue
+		
+		for node in hand_node.get_children():
+			_disable_physics_on_subtree(node)
+
+func _disable_physics_on_subtree(node: Node) -> void:
+	if node is CollisionObject3D:
+		node.collision_layer = 0
+		node.collision_mask = 0
+	if node is CollisionShape3D:
+		node.disabled = true
+	if node is PhysicsBody3D:
+		node.set("freeze", true)
+	for child in node.get_children():
+		_disable_physics_on_subtree(child)
 	
 func _physics_process(delta: float) -> void:
 	if is_dead:
@@ -47,7 +75,7 @@ func _physics_process(delta: float) -> void:
 		nav_agent.velocity = Vector3.ZERO
 		velocity.x = knockback_velocity.x
 		velocity.z = knockback_velocity.z
-		knockback_velocity = knockback_velocity.move_toward(Vector3.ZERO, HIT_KNOCKBACK_DAMPING * delta)
+		knockback_velocity = knockback_velocity.move_toward(Vector3.ZERO, enemy_info.hit_knockback_damping * delta)
 	if not is_on_floor():
 		velocity.y -= 20.0 * delta
 	time_since_last_attack += delta
@@ -64,6 +92,7 @@ func _on_idle_state_entered() -> void:
 		return
 	if stun_time_remaining > 0.0:
 		return
+	is_ranged_backpedaling = false
 	if animation_player:
 		animation_player.play(enemy_info.idle_animation)
 
@@ -73,6 +102,7 @@ func _on_follow_state_entered() -> void:
 		return
 	if stun_time_remaining > 0.0:
 		return
+	is_ranged_backpedaling = false
 	if animation_player:
 		var anim = animation_player.get_animation(enemy_info.follow_animation)
 		if anim:
@@ -83,6 +113,7 @@ func _on_died() -> void:
 	if is_dead:
 		return
 	is_dead = true
+	is_ranged_backpedaling = false
 	player_in_detection = false
 	nav_agent.velocity = Vector3.ZERO
 	velocity = Vector3.ZERO
@@ -120,8 +151,12 @@ func take_damage(amount: float, source: Node = null) -> void:
 	if amount <= 0.0:
 		return
 
-	current_health = max(current_health - amount, 0.0)
-	invulnerability_time_remaining = HIT_IFRAME_DURATION
+	var mitigated_damage: float = max(amount - enemy_info.armor, 0.0)
+	if mitigated_damage <= 0.0:
+		return
+
+	current_health = max(current_health - mitigated_damage, 0.0)
+	invulnerability_time_remaining = enemy_info.hit_iframe_duration
 	_update_health_bar()
 	if current_health <= 0.0:
 		if source and source.is_in_group("player"):
@@ -138,6 +173,8 @@ func apply_damage(amount: float, source: Node = null) -> void:
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	if is_dead:
 		return
+	if is_ranged_backpedaling:
+		return
 	velocity.x = safe_velocity.x
 	velocity.z = safe_velocity.z
 
@@ -151,7 +188,8 @@ func _on_follow_state_physics_processing(delta: float) -> void:
 	
 	# Check if close enough to attack and player is in detection area
 	var distance_to_target = global_position.distance_to(target.global_position)
-	if distance_to_target < enemy_info.attack_distance and player_in_detection and time_since_last_attack >= enemy_info.attack_cooldown:
+	var attack_range := _get_current_attack_range()
+	if distance_to_target < attack_range and player_in_detection and time_since_last_attack >= enemy_info.attack_cooldown:
 		state_chart.send_event("toAttack")
 		return
 	
@@ -179,15 +217,20 @@ func _on_attack_state_entered() -> void:
 		return
 	if stun_time_remaining > 0.0:
 		return
+	is_ranged_backpedaling = enemy_info.attack_type == EnemyInfo.AttackType.RANGED
 	# Stop all movement immediately
 	nav_agent.velocity = Vector3.ZERO
 	velocity.x = 0.0
 	velocity.z = 0.0
 	
-	if animation_player:
-		animation_player.play(enemy_info.attack_animation)
+	current_attack_animation = _choose_attack_animation()
+	if animation_player and current_attack_animation != StringName("") and enemy_info.attack_type == EnemyInfo.AttackType.MELEE:
+		animation_player.play(current_attack_animation)
 	time_since_last_attack = 0.0
 	damage_applied_this_attack = false
+
+	if enemy_info.attack_type == EnemyInfo.AttackType.RANGED:
+		_enter_ranged_attack_placeholder()
 
 
 func apply_attack_damage() -> void:
@@ -213,14 +256,30 @@ func _on_attack_state_physics_processing(delta: float) -> void:
 	# Check if player moved too far away - cancel attack if so
 	if target:
 		var distance_to_target = global_position.distance_to(target.global_position)
-		if distance_to_target > enemy_info.attack_distance + 1.5:
+		if distance_to_target > _get_current_attack_range() + 1.5:
 			state_chart.send_event("toFollow")
 			return
+
+	if enemy_info.attack_type == EnemyInfo.AttackType.RANGED:
+		_update_ranged_attack_placeholder(delta)
+		if time_since_last_attack < enemy_info.attack_cooldown:
+			return
+		if not target or not player_in_detection:
+			state_chart.send_event("toIdle")
+			return
+		var ranged_distance_to_target := global_position.distance_to(target.global_position)
+		if ranged_distance_to_target > _get_current_attack_range() + 1.0:
+			state_chart.send_event("toFollow")
+		else:
+			state_chart.send_event("toAttack")
+		return
+
+	is_ranged_backpedaling = false
 	
 	# Apply damage near the actual impact frame for better hit-sync.
 	if animation_player.is_playing() and not damage_applied_this_attack:
 		var current_anim = animation_player.get_current_animation()
-		if current_anim == enemy_info.attack_animation:
+		if current_anim == current_attack_animation:
 			var anim = animation_player.get_animation(current_anim)
 			if anim == null:
 				return
@@ -241,7 +300,7 @@ func _on_attack_state_physics_processing(delta: float) -> void:
 		return
 	
 	var distance_to_target = global_position.distance_to(target.global_position)
-	if distance_to_target > enemy_info.attack_distance + 1.0:
+	if distance_to_target > _get_current_attack_range() + 1.0:
 		state_chart.send_event("toFollow")
 
 
@@ -262,7 +321,7 @@ func _on_detection_area_body_exited(body: Node3D) -> void:
 
 
 func _apply_hit_reaction() -> void:
-	stun_time_remaining = HIT_STUN_DURATION
+	stun_time_remaining = enemy_info.hit_stun_duration
 	nav_agent.velocity = Vector3.ZERO
 
 	var knockback_dir := -global_basis.z
@@ -274,7 +333,7 @@ func _apply_hit_reaction() -> void:
 
 	knockback_dir.y = 0.0
 	knockback_dir = knockback_dir.normalized()
-	knockback_velocity = knockback_dir * HIT_KNOCKBACK_SPEED
+	knockback_velocity = knockback_dir * enemy_info.hit_knockback_speed
 
 	if animation_player and animation_player.has_animation(enemy_info.hit_animation):
 		animation_player.play(enemy_info.hit_animation)
@@ -290,3 +349,84 @@ func _update_health_bar() -> void:
 
 	progress_bar.max_value = max(enemy_info.max_health, 1.0)
 	progress_bar.value = clamp(current_health, 0.0, progress_bar.max_value)
+
+
+func _get_current_attack_range() -> float:
+	if enemy_info.attack_type == EnemyInfo.AttackType.RANGED:
+		return enemy_info.get_ranged_range()
+	return enemy_info.get_melee_range()
+
+
+func _choose_attack_animation() -> StringName:
+	var attack_animations := enemy_info.get_attack_animations()
+	if attack_animations.is_empty():
+		return StringName("")
+	if attack_animations.size() == 1:
+		return attack_animations[0]
+	return attack_animations[randi() % attack_animations.size()]
+
+
+func _enter_ranged_attack_placeholder() -> void:
+	if animation_player and animation_player.has_animation(enemy_info.ranged_backpedal_animation):
+		var backpedal_anim := animation_player.get_animation(enemy_info.ranged_backpedal_animation)
+		if backpedal_anim:
+			backpedal_anim.loop_mode = Animation.LOOP_LINEAR
+		animation_player.play(enemy_info.ranged_backpedal_animation)
+
+	_spawn_ranged_projectile()
+	damage_applied_this_attack = true
+
+
+func _update_ranged_attack_placeholder(_delta: float) -> void:
+	if not target:
+		is_ranged_backpedaling = false
+		velocity.x = 0.0
+		velocity.z = 0.0
+		return
+
+	# Face the player while moving away (backpedal) at a reduced speed.
+	var to_target := target.global_position - global_position
+	to_target.y = 0.0
+	if to_target.length_squared() < 0.0001:
+		return
+
+	var facing_dir := to_target.normalized()
+	var retreat_dir := -facing_dir
+
+	var target_rotation := atan2(facing_dir.x, facing_dir.z)
+	rotation.y = lerp_angle(rotation.y, target_rotation, 6.0 * _delta)
+
+	nav_agent.velocity = Vector3.ZERO
+	velocity.x = retreat_dir.x * enemy_info.ranged_retreat_speed
+	velocity.z = retreat_dir.z * enemy_info.ranged_retreat_speed
+	is_ranged_backpedaling = true
+
+
+func _spawn_ranged_projectile() -> void:
+	if ranged_template == null:
+		return
+
+	var projectile_instance: Node = ranged_template.duplicate()
+	if projectile_instance == null:
+		return
+	if projectile_instance is not Node3D:
+		projectile_instance.queue_free()
+		return
+
+	var projectile_node := projectile_instance as Node3D
+	projectile_node.visible = true
+	projectile_node.global_transform = ranged_template.global_transform
+
+	var spawn_parent := get_tree().current_scene if get_tree().current_scene != null else get_parent()
+	spawn_parent.add_child(projectile_node)
+
+	var launch_dir := -global_basis.z
+	if target:
+		launch_dir = target.global_position - projectile_node.global_position
+	launch_dir.y = 0.0
+	if launch_dir.length_squared() < 0.0001:
+		launch_dir = -global_basis.z
+	launch_dir = launch_dir.normalized()
+
+	if projectile_node.has_method("launch"):
+		projectile_node.call("launch", launch_dir, enemy_info.attack_damage, self, enemy_info.projectile_speed, enemy_info.projectile_max_distance)
