@@ -21,8 +21,13 @@ var knockback_velocity: Vector3 = Vector3.ZERO
 var invulnerability_time_remaining: float = 0.0
 var current_attack_animation: StringName = StringName("")
 var is_ranged_backpedaling: bool = false
+var last_nav_update_time: float = 0.0
+var cached_attack_range: float = 0.0
+var last_health_bar_update: float = 0.0
 
 const ATTACK_HIT_TIME_RATIO: float = 0.30
+const NAV_UPDATE_INTERVAL: float = 0.1  # Update pathfinding every 0.1 seconds instead of every frame
+const HEALTH_BAR_UPDATE_INTERVAL: float = 0.05  # Only update health bar every 0.05 seconds
 
 func _ready() -> void:
 	super._ready()
@@ -66,6 +71,7 @@ func _disable_physics_on_subtree(node: Node) -> void:
 		_disable_physics_on_subtree(child)
 	
 func _physics_process(delta: float) -> void:
+		
 	if is_dead:
 		return
 	if invulnerability_time_remaining > 0.0:
@@ -79,6 +85,7 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= 20.0 * delta
 	time_since_last_attack += delta
+	last_health_bar_update += delta
 	move_and_slide()
 	
 func on_triggered() -> void:
@@ -193,7 +200,11 @@ func _on_follow_state_physics_processing(delta: float) -> void:
 		state_chart.send_event("toAttack")
 		return
 	
-	nav_agent.target_position = target.global_position
+	# Throttle navigation updates to reduce CPU load
+	last_nav_update_time += delta
+	if last_nav_update_time >= NAV_UPDATE_INTERVAL:
+		last_nav_update_time = 0.0
+		nav_agent.target_position = target.global_position
 	
 	if nav_agent.is_navigation_finished():
 		nav_agent.velocity = Vector3.ZERO
@@ -276,32 +287,28 @@ func _on_attack_state_physics_processing(delta: float) -> void:
 
 	is_ranged_backpedaling = false
 	
-	# Apply damage near the actual impact frame for better hit-sync.
-	if animation_player.is_playing() and not damage_applied_this_attack:
+	# Skip animation checks if not playing to save performance
+	if not animation_player.is_playing():
+		if not target or not player_in_detection:
+			state_chart.send_event("toIdle")
+			return
+		
+		var distance_to_target = global_position.distance_to(target.global_position)
+		if distance_to_target > _get_current_attack_range() + 1.0:
+			state_chart.send_event("toFollow")
+		return
+	
+	# Apply damage near the actual impact frame for better hit-sync (only if animation is playing)
+	if not damage_applied_this_attack:
 		var current_anim = animation_player.get_current_animation()
 		if current_anim == current_attack_animation:
 			var anim = animation_player.get_animation(current_anim)
-			if anim == null:
-				return
-			var anim_length = anim.length
-			var current_pos = animation_player.get_current_animation_position()
-			var hit_time = anim_length * ATTACK_HIT_TIME_RATIO
-
-			if current_pos >= hit_time:
-				apply_attack_damage()
-			return
-	
-	# Wait for attack animation to finish before deciding to follow or go idle
-	if animation_player.is_playing():
-		return
-	
-	if not target or not player_in_detection:
-		state_chart.send_event("toIdle")
-		return
-	
-	var distance_to_target = global_position.distance_to(target.global_position)
-	if distance_to_target > _get_current_attack_range() + 1.0:
-		state_chart.send_event("toFollow")
+			if anim != null:
+				var anim_length = anim.length
+				var current_pos = animation_player.get_current_animation_position()
+				var hit_time = anim_length * ATTACK_HIT_TIME_RATIO
+				if current_pos >= hit_time:
+					apply_attack_damage()
 
 
 func _on_detection_area_body_entered(body: Node3D) -> void:
@@ -342,7 +349,12 @@ func _apply_hit_reaction() -> void:
 func _update_health_bar() -> void:
 	if not progress_bar:
 		return
+	
+	# Throttle health bar updates to reduce UI refresh calls
+	if last_health_bar_update < HEALTH_BAR_UPDATE_INTERVAL and current_health > 0.0:
+		return
 
+	last_health_bar_update = 0.0
 	if progress_bar.has_method("set_health"):
 		progress_bar.call("set_health", current_health, enemy_info.max_health)
 		return
