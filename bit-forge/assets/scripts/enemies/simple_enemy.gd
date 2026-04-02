@@ -15,6 +15,7 @@ signal killed_by_player(enemy: Node)
 @export_range(1.0, 500.0, 1.0) var max_follow_navigation_distance_meters: float = 40.0
 @export var navigation_path_check_interval: float = 0.5
 @export var activity_check_interval: float = 0.2
+@export var player_hit_iframe_duration: float = 0.12
 
 var target: CharacterBody3D
 var player_in_detection: bool = false
@@ -33,6 +34,8 @@ var last_health_bar_update: float = 0.0
 var runtime_active: bool = true
 var activity_check_elapsed: float = 0.0
 var navigation_path_check_elapsed: float = 0.0
+var _was_stunned_last_frame: bool = false
+var _hit_reaction_serial: int = 0
 
 const ATTACK_HIT_TIME_RATIO: float = 0.30
 const NAV_UPDATE_INTERVAL: float = 0.1  # Update pathfinding every 0.1 seconds instead of every frame
@@ -40,6 +43,7 @@ const HEALTH_BAR_UPDATE_INTERVAL: float = 0.05  # Only update health bar every 0
 
 func _ready() -> void:
 	super._ready()
+	add_to_group("enemy")
 	current_health = enemy_info.max_health
 	_update_health_bar()
 	_disable_hand_attachment_physics()
@@ -147,11 +151,14 @@ func _physics_process(delta: float) -> void:
 		velocity.x = knockback_velocity.x
 		velocity.z = knockback_velocity.z
 		knockback_velocity = knockback_velocity.move_toward(Vector3.ZERO, enemy_info.hit_knockback_damping * delta)
+	elif _was_stunned_last_frame:
+		_on_stun_ended()
 	if not is_on_floor():
 		velocity.y -= 20.0 * delta
 	time_since_last_attack += delta
 	last_health_bar_update += delta
 	move_and_slide()
+	_was_stunned_last_frame = stun_time_remaining > 0.0
 	
 func on_triggered() -> void:
 	if is_dead:
@@ -232,10 +239,15 @@ func take_damage(amount: float, source: Node = null) -> void:
 
 	var mitigated_damage: float = max(amount - enemy_info.armor, 0.0)
 	if mitigated_damage <= 0.0:
+		if source != null and source.is_in_group("player"):
+			_apply_hit_reaction()
 		return
 
 	current_health = max(current_health - mitigated_damage, 0.0)
-	invulnerability_time_remaining = enemy_info.hit_iframe_duration
+	var iframe_duration := enemy_info.hit_iframe_duration
+	if source != null and source.is_in_group("player") and player_hit_iframe_duration >= 0.0:
+		iframe_duration = min(iframe_duration, player_hit_iframe_duration)
+	invulnerability_time_remaining = iframe_duration
 	_update_health_bar()
 	if current_health <= 0.0:
 		if source and source.is_in_group("player"):
@@ -440,6 +452,8 @@ func _on_detection_area_body_exited(body: Node3D) -> void:
 
 
 func _apply_hit_reaction() -> void:
+	_hit_reaction_serial += 1
+	var this_hit_serial := _hit_reaction_serial
 	stun_time_remaining = enemy_info.hit_stun_duration
 	nav_agent.velocity = Vector3.ZERO
 
@@ -456,6 +470,32 @@ func _apply_hit_reaction() -> void:
 
 	if animation_player and animation_player.has_animation(enemy_info.hit_animation):
 		animation_player.play(enemy_info.hit_animation)
+
+	await get_tree().create_timer(max(enemy_info.hit_stun_duration, 0.01)).timeout
+	if this_hit_serial != _hit_reaction_serial:
+		return
+	if is_dead or not runtime_active:
+		return
+
+	# Force recovery out of hit-pose even if state events were skipped.
+	_on_stun_ended()
+
+
+func _on_stun_ended() -> void:
+	if is_dead:
+		return
+
+	if target != null and is_instance_valid(target):
+		state_chart.send_event("toFollow")
+		if animation_player and animation_player.has_animation(enemy_info.follow_animation):
+			var follow_anim := animation_player.get_animation(enemy_info.follow_animation)
+			if follow_anim:
+				follow_anim.loop_mode = Animation.LOOP_LINEAR
+			animation_player.play(enemy_info.follow_animation)
+	else:
+		state_chart.send_event("toIdle")
+		if animation_player and animation_player.has_animation(enemy_info.idle_animation):
+			animation_player.play(enemy_info.idle_animation)
 
 
 func _update_health_bar() -> void:

@@ -19,10 +19,21 @@ var current_armor: float = 0
 enum WeaponType { NONE, SWORD, BOW, MELEE }
 
 # Weapon data
-var equipped_weapon: WeaponType = WeaponType.NONE
-var weapon_damage: float = 10.0
+@export var sword_damage: float = 5.0
+@export var sword_fire_rate: float = 0.5
+@export var crossbow_damage: float = 2.5
+@export var crossbow_fire_rate: float = 0.8
+@export var crossbow_projectile_speed: float = 24.0
+@export var crossbow_projectile_max_distance: float = 45.0
+@export_flags_3d_physics var crossbow_projectile_collision_mask: int = 3
+@export var crossbow_reload_animation: StringName = "1H_Ranged_Reload"
+@export var crossbow_reload_fallback_duration: float = 0.7
+
+var equipped_weapon: WeaponType = WeaponType.SWORD
+var weapon_damage: float = 5.0
 var weapon_fire_rate: float = 0.5  # seconds between shots
 var weapon_last_shot_time: float = 0.0
+var is_crossbow_reloading: bool = false
 
 @export_group("Dash")
 
@@ -91,8 +102,14 @@ var weapon_last_shot_time: float = 0.0
 @export var input_sprint : String = "sprint"
 ## Name of Input Action to toggle freefly mode.
 @export var input_freefly : String = "freefly"
+## Name of Input Action to toggle between sword and crossbow.
+@export var input_switch_weapon : String = "switch_weapon"
 
 @export var input_crouch: String = "crouch"
+
+@export_group("Mouse")
+@export var capture_mouse_on_ready: bool = true
+@export var enforce_weapon_visual_sync: bool = true
 
 var mouse_captured : bool = false
 var look_rotation : Vector2
@@ -116,6 +133,8 @@ var camera_lean_current: float = 0.0
 var is_crouching: bool = false
 var normal_collider_height: float
 var normal_camera_height: Vector3
+var sword_model_default_transform: Transform3D
+var crossbow_model_default_transform: Transform3D
 
 
 ## IMPORTANT REFERENCES
@@ -126,7 +145,10 @@ var normal_camera_height: Vector3
 @onready var weapon_anim: AnimationPlayer = $"AnimationPlayer"
 @onready var health_bar: ProgressBar = $"Head/Camera3D/HealthUI/HpBar"
 @onready var health_label: Label = $"Head/Camera3D/HealthUI/HpBar/HpLabel"
+@onready var sword_model: Node3D = $"Rig/Skeleton3D/handslot_r/1H_Sword"
+@onready var crossbow_model: Node3D = $"Rig/Skeleton3D/handslot_r/1H_Crossbow"
 @onready var sword_hitbox: Area3D = $"Rig/Skeleton3D/handslot_r/1H_Sword/Sword HitBox"
+@onready var ranged_template: Node3D = $"Head/ranged"
 @onready var interact:RayCast3D = $Head/Camera3D/RayCast3D
 
 var focusedObject: Interactable
@@ -156,8 +178,26 @@ func _ready() -> void:
 	current_hp = current_hp
 	current_armor = current_armor
 	_update_health_bar()
+	if sword_model:
+		sword_model_default_transform = sword_model.transform
+	if crossbow_model:
+		crossbow_model_default_transform = crossbow_model.transform
+	_apply_equipped_weapon_state()
+
+	if weapon_anim:
+		weapon_anim.animation_started.connect(_on_weapon_animation_changed)
+		weapon_anim.animation_finished.connect(_on_weapon_animation_changed)
+	call_deferred("_sync_equipped_weapon_visuals")
+
+	if capture_mouse_on_ready:
+		capture_mouse()
 
 func _on_sword_body_entered(body: Node):
+	var switch_target := _find_weapon_switch_target(body)
+	if switch_target != null:
+		_on_weapon_switch_hit(switch_target)
+		return
+
 	# Check if the body is an enemy and has an apply_damage function
 	print("body: ", body)
 	if body.has_method("apply_damage"):
@@ -198,6 +238,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			_try_attack()
+
+	if InputMap.has_action(input_switch_weapon) and Input.is_action_just_pressed(input_switch_weapon):
+		toggle_weapon()
 			
 	# Toggle freefly mode
 	if can_freefly and Input.is_action_just_pressed(input_freefly):
@@ -221,6 +264,9 @@ func find_interactable(node: Node) -> Interactable:
 	return null
 
 func _process(delta):
+	if enforce_weapon_visual_sync:
+		_sync_equipped_weapon_visuals()
+
 	_update_camera_effects(delta)
 
 	if interact.is_colliding():
@@ -576,25 +622,200 @@ func release_mouse():
 	mouse_captured = false
 
 func can_attack() -> bool:
+	if equipped_weapon == WeaponType.BOW and is_crossbow_reloading:
+		return false
 	return Time.get_ticks_msec() / 1000.0 - weapon_last_shot_time >= weapon_fire_rate
 	
 func _try_attack() -> void:
 	if not can_attack():
 		return
 
+	if equipped_weapon == WeaponType.BOW:
+		if not _consume_dash_charge():
+			return
+
+		weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
+		print("Player fired crossbow")
+		_play_crossbow_attack_animation()
+		_fire_crossbow_projectile()
+		_start_crossbow_reload()
+		return
+
 	weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
+
 	print("Player Swung Sword")
-	
-	if weapon_anim:
-		weapon_anim.stop()
-		weapon_anim.play("1H_Melee_Attack_Slice_Horizontal")
+	_play_sword_attack_animation()
 
 	# Enable hitbox briefly
 	_enable_sword_hitbox()
-	await get_tree().create_timer(0.1).timeout  # hit window duration
+	await get_tree().create_timer(0.18).timeout  # hit window duration
 	_disable_sword_hitbox()
 
 	# Optional: apply damage here later (raycast / melee hitbox)
+
+
+func equip_sword() -> void:
+	equipped_weapon = WeaponType.SWORD
+	_apply_equipped_weapon_state()
+	_on_weapon_switched()
+
+
+func equip_crossbow() -> void:
+	equipped_weapon = WeaponType.BOW
+	_apply_equipped_weapon_state()
+	_on_weapon_switched()
+
+
+func toggle_weapon() -> void:
+	if equipped_weapon == WeaponType.BOW:
+		equip_sword()
+	else:
+		equip_crossbow()
+
+
+func _play_sword_attack_animation() -> void:
+	if not weapon_anim:
+		return
+
+	weapon_anim.stop()
+	if weapon_anim.has_animation("1H_Melee_Attack_Slice_Horizontal"):
+		weapon_anim.play("1H_Melee_Attack_Slice_Horizontal")
+
+
+func _play_crossbow_attack_animation() -> void:
+	if not weapon_anim:
+		return
+
+	weapon_anim.stop()
+	if weapon_anim.has_animation("1H_Ranged_Shoot"):
+		weapon_anim.play("1H_Ranged_Shoot")
+	elif weapon_anim.has_animation("1H_Ranged_Shooting"):
+		weapon_anim.play("1H_Ranged_Shooting")
+
+
+func _start_crossbow_reload() -> void:
+	if is_crossbow_reloading:
+		return
+
+	is_crossbow_reloading = true
+	var reload_duration := max(crossbow_reload_fallback_duration, 0.01)
+
+	if weapon_anim and weapon_anim.has_animation(crossbow_reload_animation):
+		weapon_anim.play(crossbow_reload_animation)
+		var reload_anim := weapon_anim.get_animation(crossbow_reload_animation)
+		if reload_anim:
+			reload_duration = max(reload_anim.length, 0.01)
+
+	await get_tree().create_timer(reload_duration).timeout
+	is_crossbow_reloading = false
+
+
+func _fire_crossbow_projectile() -> void:
+	if ranged_template == null:
+		push_warning("Missing ranged projectile template at Head/ranged.")
+		return
+
+	var projectile_instance: Node = ranged_template.duplicate()
+	if projectile_instance == null:
+		return
+	if projectile_instance is not Node3D:
+		projectile_instance.queue_free()
+		return
+
+	var projectile_node := projectile_instance as Node3D
+	projectile_node.visible = true
+	projectile_node.global_transform = ranged_template.global_transform
+
+	var spawn_parent := get_tree().current_scene if get_tree().current_scene != null else get_parent()
+	spawn_parent.add_child(projectile_node)
+
+	if projectile_node.has_method("set"):
+		projectile_node.set("collision_mask", crossbow_projectile_collision_mask)
+
+	var launch_dir := -camera_3d.global_basis.z
+	if interact != null and interact.is_colliding():
+		launch_dir = interact.get_collision_point() - projectile_node.global_position
+	if launch_dir.length_squared() < 0.0001:
+		launch_dir = -camera_3d.global_basis.z
+	launch_dir = launch_dir.normalized()
+
+	if projectile_node.has_method("launch"):
+		projectile_node.call("launch", launch_dir, weapon_damage, self, crossbow_projectile_speed, crossbow_projectile_max_distance)
+
+
+func _find_weapon_switch_target(node: Node) -> Node:
+	var current := node
+	while current != null:
+		if current.is_in_group("weapon_switch"):
+			return current
+		current = current.get_parent()
+	return null
+
+
+func _on_weapon_switch_hit(switch_target: Node) -> void:
+	equip_crossbow()
+
+	if switch_target.has_method("on_player_weapon_hit"):
+		switch_target.call("on_player_weapon_hit", self)
+	elif switch_target.has_method("activate_switch"):
+		switch_target.call("activate_switch", self)
+
+
+func _apply_equipped_weapon_state() -> void:
+	if equipped_weapon == WeaponType.BOW:
+		weapon_damage = crossbow_damage
+		weapon_fire_rate = crossbow_fire_rate
+	else:
+		# Default NONE/MELEE to sword visuals for now.
+		equipped_weapon = WeaponType.SWORD
+		weapon_damage = sword_damage
+		weapon_fire_rate = sword_fire_rate
+
+	_sync_equipped_weapon_visuals()
+	_disable_sword_hitbox()
+
+
+func _sync_equipped_weapon_visuals() -> void:
+	if sword_model:
+		sword_model.visible = equipped_weapon == WeaponType.SWORD
+		sword_model.transform = sword_model_default_transform
+	if crossbow_model:
+		crossbow_model.visible = equipped_weapon == WeaponType.BOW
+		crossbow_model.transform = crossbow_model_default_transform
+
+
+func _on_weapon_animation_changed(_anim_name: StringName) -> void:
+	# Some animations key visibility tracks; force equipped visuals right after changes.
+	call_deferred("_sync_equipped_weapon_visuals")
+
+
+func _on_weapon_switched() -> void:
+	if weapon_anim:
+		# Stop whatever attack animation was active so old pose doesn't persist.
+		weapon_anim.stop()
+		_play_post_switch_idle_pose()
+
+	# Enforce visuals at end-of-frame after AnimationPlayer updates.
+	call_deferred("_sync_equipped_weapon_visuals")
+
+
+func _play_post_switch_idle_pose() -> void:
+	if not weapon_anim:
+		return
+
+	if equipped_weapon == WeaponType.BOW and weapon_anim.has_animation("1H_Ranged_Shoot"):
+		weapon_anim.play("1H_Ranged_Shoot")
+		weapon_anim.advance(0.0)
+		return
+
+	if equipped_weapon == WeaponType.SWORD and weapon_anim.has_animation("1H_Melee_Idle"):
+		weapon_anim.play("1H_Melee_Idle")
+		weapon_anim.advance(0.0)
+		return
+
+	if weapon_anim.has_animation("Idle"):
+		weapon_anim.play("Idle")
+		weapon_anim.advance(0.0)
 	
 
 ## Checks if some Input Actions haven't been created.
