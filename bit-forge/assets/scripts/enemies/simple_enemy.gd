@@ -239,7 +239,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 
 	var mitigated_damage: float = max(amount - enemy_info.armor, 0.0)
 	if mitigated_damage <= 0.0:
-		if source != null and source.is_in_group("player"):
+		if source != null and source.is_in_group("player") and not _is_magic_source(source):
 			_apply_hit_reaction()
 		return
 
@@ -255,11 +255,22 @@ func take_damage(amount: float, source: Node = null) -> void:
 		_on_died()
 		return
 
-	_apply_hit_reaction()
+	if not _is_magic_source(source):
+		_apply_hit_reaction()
 
 
 func apply_damage(amount: float, source: Node = null) -> void:
 	take_damage(amount, source)
+
+
+func _is_magic_source(source: Node) -> bool:
+	if source == null:
+		return false
+	if not source.is_in_group("player"):
+		return false
+	if source.has_method("is_magic_equipped"):
+		return bool(source.call("is_magic_equipped"))
+	return false
 	
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	if not runtime_active:
@@ -587,7 +598,6 @@ func _spawn_ranged_projectile() -> void:
 	var launch_dir := -global_basis.z
 	if target:
 		launch_dir = target.global_position - projectile_node.global_position
-	launch_dir.y = 0.0
 	if launch_dir.length_squared() < 0.0001:
 		launch_dir = -global_basis.z
 	launch_dir = launch_dir.normalized()

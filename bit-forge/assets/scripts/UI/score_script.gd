@@ -12,6 +12,7 @@ var player: Player
 func _ready() -> void:
 	text = "0x"
 	_resolve_player_reference()
+	_connect_player_signals()
 	_connect_existing_enemy_signals()
 	if not get_tree().node_added.is_connected(_on_tree_node_added):
 		get_tree().node_added.connect(_on_tree_node_added)
@@ -28,14 +29,48 @@ func _process(delta: float) -> void:
 
 
 func _on_enemy_killed_by_player(_enemy: Node) -> void:
+	if _is_sword_equipped():
+		return
+
+	_add_combo_stack()
+
+
+func _on_sword_hit_landed(_target: Node) -> void:
+	_add_combo_stack()
+
+
+func _add_combo_stack() -> void:
 	combo_count += 1
 	text = str(combo_count) + "x"
 	combo_time_remaining = combo_timeout_seconds
 
-	if player and player.has_method("add_dash_charge"):
+	if player and player.has_method("add_arrow_charge"):
+		player.call("add_arrow_charge", 1)
+	elif player and player.has_method("add_dash_charge"):
 		player.call("add_dash_charge", 1)
 
 	_apply_player_combo_bonus()
+
+
+func _is_sword_equipped() -> bool:
+	if not player:
+		_resolve_player_reference()
+	if not player:
+		return false
+
+	var equipped_weapon: Variant = player.get("equipped_weapon")
+	return typeof(equipped_weapon) == TYPE_INT and int(equipped_weapon) == 1
+
+
+func _connect_player_signals() -> void:
+	if not player:
+		_resolve_player_reference()
+	if not player or not player.has_signal("sword_hit_landed"):
+		return
+
+	var callback := Callable(self, "_on_sword_hit_landed")
+	if not player.is_connected("sword_hit_landed", callback):
+		player.connect("sword_hit_landed", callback)
 
 
 func _reset_combo() -> void:

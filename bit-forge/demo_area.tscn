@@ -55,6 +55,7 @@ shadow_enabled = true
 
 [node name="ProtoController" parent="." instance=ExtResource("2_s4c34")]
 transform = Transform3D(-0.014852151, 0, -0.9998897, 0, 1, 0, 0.9998897, 0, -0.014852151, -24.903135, 1, 36.44785)
+sword_fire_rate = 0.2
 can_sprint = true
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]

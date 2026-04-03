@@ -11,7 +11,6 @@ var _sent_to_graveyard: bool = false
 func _ready() -> void:
 	_player = _resolve_player()
 	_hp_label = _resolve_label_below()
-	_configure_texture_fill()
 	_sync_from_player()
 
 
@@ -84,10 +83,3 @@ func _resolve_label_below() -> Label:
 				return nested as Label
 
 	return null
-
-
-func _configure_texture_fill() -> void:
-	# Keep fill driven by texture_progress instead of ProgressBar style overrides.
-	if has_theme_stylebox_override("fill"):
-		remove_theme_stylebox_override("fill")
-	tint_progress = Color(1, 1, 1, 1)

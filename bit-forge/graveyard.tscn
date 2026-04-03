@@ -116,8 +116,9 @@ light_indirect_energy = 0.527
 shadow_enabled = true
 
 [node name="CSGSphere3D" type="CSGSphere3D" parent="DirectionalLight3D"]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 11, 0, 0)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -127.69388, -4.7683716e-06, 6.556511e-06)
 material_override = SubResource("StandardMaterial3D_w48qg")
+radius = 1.255
 material = SubResource("StandardMaterial3D_2cqfq")
 
 [node name="Floor" type="CSGBox3D" parent="."]

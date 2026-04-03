@@ -7,6 +7,8 @@ extends CharacterBody3D
 
 class_name Player
 
+signal sword_hit_landed(target: Node)
+
 @export_group("Stats")
 @export var max_hp: float = 1000.0
 @export var max_armor: float = 50.0
@@ -16,7 +18,7 @@ var current_armor: float = 0
 @export_group("Weapons")
 
 # Weapon types
-enum WeaponType { NONE, SWORD, BOW, MELEE }
+enum WeaponType { NONE, SWORD, BOW, MAGIC, MELEE }
 
 # Weapon data
 @export var sword_damage: float = 5.0
@@ -28,6 +30,11 @@ enum WeaponType { NONE, SWORD, BOW, MELEE }
 @export_flags_3d_physics var crossbow_projectile_collision_mask: int = 3
 @export var crossbow_reload_animation: StringName = "1H_Ranged_Reload"
 @export var crossbow_reload_fallback_duration: float = 0.7
+@export var magic_damage: float = 4.0
+@export var magic_fire_rate: float = 0.6
+@export var magic_projectile_speed: float = 20.0
+@export var magic_projectile_max_distance: float = 40.0
+@export_flags_3d_physics var magic_projectile_collision_mask: int = 3
 
 var equipped_weapon: WeaponType = WeaponType.SWORD
 var weapon_damage: float = 5.0
@@ -40,6 +47,10 @@ var is_crossbow_reloading: bool = false
 @export var dash_duration := 0.18       # how long a dash lasts
 @export var dash_cooldown := 1.0        # seconds before dash can be used again
 @export var max_dash_charges := 3       # total dash charges
+
+@export_group("Arrows")
+@export var max_arrow_charges: int = 5
+@export var arrow_recharge_cooldown: float = 1.0
 
 
 @export_group("Crouch")
@@ -86,6 +97,9 @@ var is_crossbow_reloading: bool = false
 @export var damage_shake_amount: float = 0.06
 @export var camera_lean_max_degrees: float = 3.0
 @export var camera_lean_response_speed: float = 8.0
+@export var hit_flash_duration: float = 0.12
+@export var hit_flash_max_alpha: float = 0.35
+@export var hit_flash_color: Color = Color(1.0, 0.0, 0.0, 1.0)
 
 @export_group("Input Actions")
 ## Name of Input Action to move Left.
@@ -121,11 +135,14 @@ var is_dashing := false
 var dash_direction := Vector3.ZERO
 var dash_recharge_index := -1
 var dash_charges: Array[float] = []
+var arrow_recharge_index := -1
+var arrow_charges: Array[float] = []
 var combo_speed_multiplier: float = 1.0
 var damage_knockback_velocity := Vector3.ZERO
 var camera_bob_time: float = 0.0
 var damage_shake_time_left: float = 0.0
 var damage_shake_strength: float = 0.0
+var hit_flash_time_left: float = 0.0
 var camera_base_position: Vector3 = Vector3.ZERO
 var camera_base_rotation: Vector3 = Vector3.ZERO
 var camera_lean_current: float = 0.0
@@ -135,6 +152,7 @@ var normal_collider_height: float
 var normal_camera_height: Vector3
 var sword_model_default_transform: Transform3D
 var crossbow_model_default_transform: Transform3D
+var magic_model_default_transform: Transform3D
 
 
 ## IMPORTANT REFERENCES
@@ -142,16 +160,20 @@ var crossbow_model_default_transform: Transform3D
 @onready var camera_3d: Camera3D = $Head/Camera3D
 @onready var collider: CollisionShape3D = $Collider
 @onready var sprint_bar_root: CanvasLayer = $"Head/Camera3D/SprintUI"
+@onready var arrow_bar_root: CanvasLayer = $"CanvasLayer"
 @onready var weapon_anim: AnimationPlayer = $"AnimationPlayer"
 @onready var health_bar: ProgressBar = $"Head/Camera3D/HealthUI/HpBar"
 @onready var health_label: Label = $"Head/Camera3D/HealthUI/HpBar/HpLabel"
 @onready var sword_model: Node3D = $"Rig/Skeleton3D/handslot_r/1H_Sword"
 @onready var crossbow_model: Node3D = $"Rig/Skeleton3D/handslot_r/1H_Crossbow"
+@onready var magic_model: Node3D = $"Rig/Skeleton3D/handslot_r/spellbook_open3"
 @onready var sword_hitbox: Area3D = $"Rig/Skeleton3D/handslot_r/1H_Sword/Sword HitBox"
-@onready var ranged_template: Node3D = $"Head/ranged"
+@onready var ranged_bow_template: Node3D = get_node_or_null("Head/rangedbow")
+@onready var ranged_magic_template: Node3D = get_node_or_null("Head/rangedmagic")
 @onready var interact:RayCast3D = $Head/Camera3D/RayCast3D
 
 var focusedObject: Interactable
+var hit_flash_rect: ColorRect = null
 
 func _ready() -> void:
 	add_to_group("player")
@@ -170,6 +192,11 @@ func _ready() -> void:
 		dash_charges.append(1.0)
 	_configure_dash_bars()
 
+	arrow_charges = []
+	for i in range(max_arrow_charges):
+		arrow_charges.append(1.0)
+	_configure_arrow_bars()
+
 	
 	normal_collider_height = collider.shape.height
 	normal_camera_height = head.position
@@ -182,12 +209,15 @@ func _ready() -> void:
 		sword_model_default_transform = sword_model.transform
 	if crossbow_model:
 		crossbow_model_default_transform = crossbow_model.transform
+	if magic_model:
+		magic_model_default_transform = magic_model.transform
 	_apply_equipped_weapon_state()
 
 	if weapon_anim:
 		weapon_anim.animation_started.connect(_on_weapon_animation_changed)
 		weapon_anim.animation_finished.connect(_on_weapon_animation_changed)
 	call_deferred("_sync_equipped_weapon_visuals")
+	_setup_hit_flash_overlay()
 
 	if capture_mouse_on_ready:
 		capture_mouse()
@@ -202,8 +232,10 @@ func _on_sword_body_entered(body: Node):
 	print("body: ", body)
 	if body.has_method("apply_damage"):
 		print("Hit enemy:", body.name)
+		emit_signal("sword_hit_landed", body)
 		body.apply_damage(weapon_damage, self)
 	elif body.has_method("take_damage"):
+		emit_signal("sword_hit_landed", body)
 		body.take_damage(weapon_damage, self)
 		
 func _enable_sword_hitbox():
@@ -232,7 +264,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	
 	# Look around
 	if mouse_captured and event is InputEventMouseMotion:
-		rotate_look(event.relative)
+		rotate_look(event.relative * 0.1)
 	
 		# ATTACK (left click)
 	if event is InputEventMouseButton:
@@ -267,6 +299,11 @@ func _process(delta):
 	if enforce_weapon_visual_sync:
 		_sync_equipped_weapon_visuals()
 
+	if equipped_weapon == WeaponType.MAGIC and mouse_captured and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_try_attack()
+
+	_update_hit_flash_overlay(delta)
+
 	_update_camera_effects(delta)
 
 	if interact.is_colliding():
@@ -295,6 +332,7 @@ func _clear_focus():
 		
 func _physics_process(delta: float) -> void:
 	_update_dash_recharge(delta)
+	_update_arrow_recharge(delta)
 
 	if is_dashing:
 		dash_time_left -= delta
@@ -390,7 +428,7 @@ func add_dash_charge(amount: int = 1) -> void:
 		return
 
 	for i in range(amount):
-		var refill_index := _find_highest_missing_dash_charge()
+		var refill_index := _find_first_missing_dash_charge()
 		if refill_index == -1:
 			break
 
@@ -401,9 +439,32 @@ func add_dash_charge(amount: int = 1) -> void:
 	_update_dash_bars()
 
 
-func _find_highest_missing_dash_charge() -> int:
-	for i in range(dash_charges.size() - 1, -1, -1):
+func _find_first_missing_dash_charge() -> int:
+	for i in range(dash_charges.size()):
 		if dash_charges[i] < 1.0:
+			return i
+	return -1
+
+
+func add_arrow_charge(amount: int = 1) -> void:
+	if amount <= 0 or arrow_charges.is_empty():
+		return
+
+	for i in range(amount):
+		var refill_index := _find_first_missing_arrow_charge()
+		if refill_index == -1:
+			break
+
+		arrow_charges[refill_index] = 1.0
+		if arrow_recharge_index == refill_index:
+			arrow_recharge_index = -1
+
+	_update_arrow_bars()
+
+
+func _find_first_missing_arrow_charge() -> int:
+	for i in range(arrow_charges.size()):
+		if arrow_charges[i] < 1.0:
 			return i
 	return -1
 
@@ -484,6 +545,89 @@ func _find_next_recharge_index() -> int:
 	return -1
 
 
+func _configure_arrow_bars() -> void:
+	if not arrow_bar_root:
+		return
+
+	for bar in _get_arrow_bars_in_ui_order():
+		bar.min_value = 0.0
+		bar.max_value = 100.0
+
+	_update_arrow_bars()
+
+
+func _update_arrow_bars() -> void:
+	if not arrow_bar_root:
+		return
+
+	var bars := _get_arrow_bars_in_ui_order()
+
+	for i in range(bars.size()):
+		if i < arrow_charges.size():
+			bars[i].value = clamp(arrow_charges[i] * 100.0, 0.0, 100.0)
+
+
+func _get_arrow_bars_in_ui_order() -> Array[TextureProgressBar]:
+	var bars: Array[TextureProgressBar] = []
+	if not arrow_bar_root:
+		return bars
+
+	for child in arrow_bar_root.get_children():
+		if child is TextureProgressBar and child.name.begins_with("TextureProgressBar"):
+			bars.append(child)
+
+	return bars
+
+
+func _consume_arrow_charge() -> bool:
+	for i in range(arrow_charges.size() - 1, -1, -1):
+		if arrow_charges[i] >= 1.0:
+			# If an arrow is currently recharging, cancel that progress.
+			if arrow_recharge_index >= 0 and arrow_recharge_index < arrow_charges.size() and arrow_charges[arrow_recharge_index] < 1.0:
+				arrow_charges[arrow_recharge_index] = 0.0
+			arrow_recharge_index = -1
+
+			arrow_charges[i] = 0.0
+			_update_arrow_bars()
+			return true
+
+	return false
+
+
+func _update_arrow_recharge(delta: float) -> void:
+	if arrow_charges.is_empty():
+		return
+
+	if arrow_recharge_index == -1:
+		arrow_recharge_index = _find_next_arrow_recharge_index()
+
+	if arrow_recharge_index == -1:
+		return
+
+	if arrow_recharge_cooldown <= 0.0:
+		arrow_charges[arrow_recharge_index] = 1.0
+		arrow_recharge_index = -1
+		_update_arrow_bars()
+		return
+
+	arrow_charges[arrow_recharge_index] = min(arrow_charges[arrow_recharge_index] + (delta / arrow_recharge_cooldown), 1.0)
+	if arrow_charges[arrow_recharge_index] >= 1.0:
+		arrow_recharge_index = -1
+
+	_update_arrow_bars()
+
+
+func _find_next_arrow_recharge_index() -> int:
+	for i in range(arrow_charges.size()):
+		if arrow_charges[i] < 1.0:
+			return i
+	return -1
+
+
+func get_arrow_charges() -> Array[float]:
+	return arrow_charges.duplicate()
+
+
 # --------------------
 # Health Functions
 # --------------------
@@ -492,6 +636,7 @@ func apply_damage(amount: float, source: Node = null) -> void:
 	if final_damage > 0.0:
 		_play_hurt_animation()
 		_trigger_damage_camera_shake()
+		_trigger_hit_flash()
 		_apply_damage_knockback(source)
 	current_hp = clamp(current_hp - final_damage, 0, max_hp)
 	_update_health_bar()
@@ -548,6 +693,42 @@ func _play_hurt_animation() -> void:
 func _trigger_damage_camera_shake() -> void:
 	damage_shake_time_left = damage_shake_duration
 	damage_shake_strength = damage_shake_amount
+
+
+func _setup_hit_flash_overlay() -> void:
+	if hit_flash_rect != null:
+		return
+
+	var flash_layer := CanvasLayer.new()
+	flash_layer.layer = 100
+	add_child(flash_layer)
+
+	hit_flash_rect = ColorRect.new()
+	hit_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hit_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hit_flash_rect.visible = false
+	flash_layer.add_child(hit_flash_rect)
+
+
+func _trigger_hit_flash() -> void:
+	hit_flash_time_left = max(hit_flash_duration, 0.01)
+	if hit_flash_rect == null:
+		_setup_hit_flash_overlay()
+
+
+func _update_hit_flash_overlay(delta: float) -> void:
+	if hit_flash_rect == null:
+		return
+
+	if hit_flash_time_left > 0.0:
+		hit_flash_time_left = max(hit_flash_time_left - delta, 0.0)
+		var fade: float = hit_flash_time_left / maxf(hit_flash_duration, 0.01)
+		var flash: Color = hit_flash_color
+		flash.a = clamp(hit_flash_max_alpha * fade, 0.0, 1.0)
+		hit_flash_rect.color = flash
+		hit_flash_rect.visible = true
+	elif hit_flash_rect.visible:
+		hit_flash_rect.visible = false
 
 
 func _update_camera_effects(delta: float) -> void:
@@ -631,7 +812,7 @@ func _try_attack() -> void:
 		return
 
 	if equipped_weapon == WeaponType.BOW:
-		if not _consume_dash_charge():
+		if not _consume_arrow_charge():
 			return
 
 		weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
@@ -639,6 +820,13 @@ func _try_attack() -> void:
 		_play_crossbow_attack_animation()
 		_fire_crossbow_projectile()
 		_start_crossbow_reload()
+		return
+
+	if equipped_weapon == WeaponType.MAGIC:
+		weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
+		print("Player cast magic")
+		_play_magic_attack_animation()
+		_fire_magic_projectile()
 		return
 
 	weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
@@ -667,10 +855,12 @@ func equip_crossbow() -> void:
 
 
 func toggle_weapon() -> void:
-	if equipped_weapon == WeaponType.BOW:
-		equip_sword()
-	else:
+	if equipped_weapon == WeaponType.SWORD:
 		equip_crossbow()
+	elif equipped_weapon == WeaponType.BOW:
+		equip_magic()
+	else:
+		equip_sword()
 
 
 func _play_sword_attack_animation() -> void:
@@ -693,6 +883,17 @@ func _play_crossbow_attack_animation() -> void:
 		weapon_anim.play("1H_Ranged_Shooting")
 
 
+func _play_magic_attack_animation() -> void:
+	if not weapon_anim:
+		return
+
+	weapon_anim.stop()
+	if weapon_anim.has_animation("Spellcast_Shoot"):
+		weapon_anim.play("Spellcast_Shoot")
+	elif weapon_anim.has_animation("1H_Ranged_Shoot"):
+		weapon_anim.play("1H_Ranged_Shoot")
+
+
 func _start_crossbow_reload() -> void:
 	if is_crossbow_reloading:
 		return
@@ -711,11 +912,22 @@ func _start_crossbow_reload() -> void:
 
 
 func _fire_crossbow_projectile() -> void:
-	if ranged_template == null:
-		push_warning("Missing ranged projectile template at Head/ranged.")
+	if ranged_bow_template == null:
+		push_warning("Missing ranged projectile template at Head/rangedbow.")
+		return
+	_spawn_projectile_from_template(ranged_bow_template, crossbow_damage, crossbow_projectile_speed, crossbow_projectile_max_distance, crossbow_projectile_collision_mask)
+
+
+func _fire_magic_projectile() -> void:
+	if ranged_magic_template == null:
+		push_warning("Missing magic projectile template at Head/rangedmagic.")
 		return
 
-	var projectile_instance: Node = ranged_template.duplicate()
+	_spawn_projectile_from_template(ranged_magic_template, magic_damage, magic_projectile_speed, magic_projectile_max_distance, magic_projectile_collision_mask)
+
+
+func _spawn_projectile_from_template(template_node: Node3D, projectile_damage: float, projectile_speed: float, projectile_max_distance: float, projectile_collision_mask: int) -> void:
+	var projectile_instance: Node = template_node.duplicate()
 	if projectile_instance == null:
 		return
 	if projectile_instance is not Node3D:
@@ -724,13 +936,13 @@ func _fire_crossbow_projectile() -> void:
 
 	var projectile_node := projectile_instance as Node3D
 	projectile_node.visible = true
-	projectile_node.global_transform = ranged_template.global_transform
+	projectile_node.global_transform = template_node.global_transform
 
 	var spawn_parent := get_tree().current_scene if get_tree().current_scene != null else get_parent()
 	spawn_parent.add_child(projectile_node)
 
 	if projectile_node.has_method("set"):
-		projectile_node.set("collision_mask", crossbow_projectile_collision_mask)
+		projectile_node.set("collision_mask", projectile_collision_mask)
 
 	var launch_dir := -camera_3d.global_basis.z
 	if interact != null and interact.is_colliding():
@@ -740,7 +952,7 @@ func _fire_crossbow_projectile() -> void:
 	launch_dir = launch_dir.normalized()
 
 	if projectile_node.has_method("launch"):
-		projectile_node.call("launch", launch_dir, weapon_damage, self, crossbow_projectile_speed, crossbow_projectile_max_distance)
+		projectile_node.call("launch", launch_dir, projectile_damage, self, projectile_speed, projectile_max_distance)
 
 
 func _find_weapon_switch_target(node: Node) -> Node:
@@ -765,6 +977,9 @@ func _apply_equipped_weapon_state() -> void:
 	if equipped_weapon == WeaponType.BOW:
 		weapon_damage = crossbow_damage
 		weapon_fire_rate = crossbow_fire_rate
+	elif equipped_weapon == WeaponType.MAGIC:
+		weapon_damage = magic_damage
+		weapon_fire_rate = magic_fire_rate
 	else:
 		# Default NONE/MELEE to sword visuals for now.
 		equipped_weapon = WeaponType.SWORD
@@ -775,6 +990,12 @@ func _apply_equipped_weapon_state() -> void:
 	_disable_sword_hitbox()
 
 
+func equip_magic() -> void:
+	equipped_weapon = WeaponType.MAGIC
+	_apply_equipped_weapon_state()
+	_on_weapon_switched()
+
+
 func _sync_equipped_weapon_visuals() -> void:
 	if sword_model:
 		sword_model.visible = equipped_weapon == WeaponType.SWORD
@@ -782,6 +1003,9 @@ func _sync_equipped_weapon_visuals() -> void:
 	if crossbow_model:
 		crossbow_model.visible = equipped_weapon == WeaponType.BOW
 		crossbow_model.transform = crossbow_model_default_transform
+	if magic_model:
+		magic_model.visible = equipped_weapon == WeaponType.MAGIC
+		magic_model.transform = magic_model_default_transform
 
 
 func _on_weapon_animation_changed(_anim_name: StringName) -> void:
@@ -808,6 +1032,11 @@ func _play_post_switch_idle_pose() -> void:
 		weapon_anim.advance(0.0)
 		return
 
+	if equipped_weapon == WeaponType.MAGIC and weapon_anim.has_animation("Spellcast_Shoot"):
+		weapon_anim.play("Spellcast_Shoot")
+		weapon_anim.advance(0.0)
+		return
+
 	if equipped_weapon == WeaponType.SWORD and weapon_anim.has_animation("1H_Melee_Idle"):
 		weapon_anim.play("1H_Melee_Idle")
 		weapon_anim.advance(0.0)
@@ -816,6 +1045,10 @@ func _play_post_switch_idle_pose() -> void:
 	if weapon_anim.has_animation("Idle"):
 		weapon_anim.play("Idle")
 		weapon_anim.advance(0.0)
+
+
+func is_magic_equipped() -> bool:
+	return equipped_weapon == WeaponType.MAGIC
 	
 
 ## Checks if some Input Actions haven't been created.
