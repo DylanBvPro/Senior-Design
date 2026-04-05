@@ -8,6 +8,7 @@ extends CharacterBody3D
 class_name Player
 
 signal sword_hit_landed(target: Node)
+signal bow_hit_landed(target: Node)
 
 @export_group("Stats")
 @export var max_hp: float = 1000.0
@@ -35,6 +36,11 @@ enum WeaponType { NONE, SWORD, BOW, MAGIC, MELEE }
 @export var magic_projectile_speed: float = 20.0
 @export var magic_projectile_max_distance: float = 40.0
 @export_flags_3d_physics var magic_projectile_collision_mask: int = 3
+@export var max_mana: float = 100.0
+@export var current_mana: float = 100.0
+@export var magic_attack_mana_cost: float = 5.0
+@export var mana_regen_per_second: float = 12.0
+@export var mana_regen_delay: float = 1.25
 
 var equipped_weapon: WeaponType = WeaponType.SWORD
 var weapon_damage: float = 5.0
@@ -47,6 +53,10 @@ var is_crossbow_reloading: bool = false
 @export var dash_duration := 0.18       # how long a dash lasts
 @export var dash_cooldown := 1.0        # seconds before dash can be used again
 @export var max_dash_charges := 3       # total dash charges
+@export var dash_speedlines_scale: float = 0.025
+@export var dash_speedlines_max_density: float = 1.0
+@export var loading_fade_in_duration: float = 0.3
+@export var loading_overlay_target_alpha: float = 1.0
 
 @export_group("Arrows")
 @export var max_arrow_charges: int = 5
@@ -137,6 +147,7 @@ var dash_recharge_index := -1
 var dash_charges: Array[float] = []
 var arrow_recharge_index := -1
 var arrow_charges: Array[float] = []
+var mana_regen_delay_remaining: float = 0.0
 var combo_speed_multiplier: float = 1.0
 var damage_knockback_velocity := Vector3.ZERO
 var camera_bob_time: float = 0.0
@@ -171,9 +182,14 @@ var magic_model_default_transform: Transform3D
 @onready var ranged_bow_template: Node3D = get_node_or_null("Head/rangedbow")
 @onready var ranged_magic_template: Node3D = get_node_or_null("Head/rangedmagic")
 @onready var interact:RayCast3D = $Head/Camera3D/RayCast3D
+@onready var speed_lines: ColorRect = $"Head/Camera3D/Control/SpeedLines"
+@onready var loading_ui: CanvasLayer = get_node_or_null("Head/Camera3D/LoadingUI")
+@onready var loading_label: Label = get_node_or_null("Head/Camera3D/LoadingUI/Label")
 
 var focusedObject: Interactable
 var hit_flash_rect: ColorRect = null
+var loading_overlay_rect: ColorRect = null
+var loading_label_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("player")
@@ -211,6 +227,8 @@ func _ready() -> void:
 		crossbow_model_default_transform = crossbow_model.transform
 	if magic_model:
 		magic_model_default_transform = magic_model.transform
+	current_mana = clamp(current_mana, 0.0, max(max_mana, 0.0))
+	mana_regen_delay_remaining = 0.0
 	_apply_equipped_weapon_state()
 
 	if weapon_anim:
@@ -218,6 +236,8 @@ func _ready() -> void:
 		weapon_anim.animation_finished.connect(_on_weapon_animation_changed)
 	call_deferred("_sync_equipped_weapon_visuals")
 	_setup_hit_flash_overlay()
+	_setup_loading_ui_overlay()
+	_set_speedlines_density(0.0)
 
 	if capture_mouse_on_ready:
 		capture_mouse()
@@ -333,6 +353,7 @@ func _clear_focus():
 func _physics_process(delta: float) -> void:
 	_update_dash_recharge(delta)
 	_update_arrow_recharge(delta)
+	_update_mana_regen(delta)
 
 	if is_dashing:
 		dash_time_left -= delta
@@ -393,6 +414,7 @@ func _physics_process(delta: float) -> void:
 	
 	# Use velocity to actually move
 	move_and_slide()
+	_update_dash_speedlines()
 
 	_update_dash_bars()
 		
@@ -628,6 +650,39 @@ func get_arrow_charges() -> Array[float]:
 	return arrow_charges.duplicate()
 
 
+func _consume_mana(amount: float) -> bool:
+	if amount <= 0.0:
+		return true
+
+	if current_mana < amount:
+		return false
+
+	current_mana = clamp(current_mana - amount, 0.0, max(max_mana, 0.0))
+	mana_regen_delay_remaining = max(mana_regen_delay, 0.0)
+	return true
+
+
+func _update_mana_regen(delta: float) -> void:
+	if current_mana >= max_mana:
+		mana_regen_delay_remaining = 0.0
+		return
+
+	if mana_regen_delay_remaining > 0.0:
+		mana_regen_delay_remaining = max(mana_regen_delay_remaining - delta, 0.0)
+		return
+
+	if mana_regen_per_second <= 0.0:
+		return
+
+	current_mana = min(current_mana + (mana_regen_per_second * delta), max_mana)
+
+
+func get_mana_percentage() -> float:
+	if max_mana <= 0.0:
+		return 0.0
+	return clamp((current_mana / max_mana) * 100.0, 0.0, 100.0)
+
+
 # --------------------
 # Health Functions
 # --------------------
@@ -710,10 +765,93 @@ func _setup_hit_flash_overlay() -> void:
 	flash_layer.add_child(hit_flash_rect)
 
 
+func _setup_loading_ui_overlay() -> void:
+	if loading_ui == null:
+		return
+
+	loading_ui.layer = 500
+	loading_ui.visible = false
+
+	if loading_overlay_rect != null:
+		return
+
+	loading_overlay_rect = ColorRect.new()
+	loading_overlay_rect.name = "LoadingFadeOverlay"
+	loading_overlay_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	loading_overlay_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	loading_overlay_rect.color = Color(0.0, 0.0, 0.0, 0.0)
+	loading_ui.add_child(loading_overlay_rect)
+	loading_ui.move_child(loading_overlay_rect, 0)
+
+	if loading_label != null:
+		loading_label.visible = false
+		loading_label.z_index = 10
+		loading_label.modulate = Color(1.0, 1.0, 1.0, 0.2)
+
+
+func play_scene_loading_transition() -> void:
+	if loading_ui == null:
+		return
+
+	if loading_label_tween != null and loading_label_tween.is_running():
+		loading_label_tween.kill()
+
+	loading_ui.visible = true
+
+	if loading_overlay_rect != null:
+		loading_overlay_rect.color = Color(0.0, 0.0, 0.0, 0.0)
+
+	if loading_label != null:
+		loading_label.visible = true
+		loading_label.text = "Loading"
+		loading_label.modulate = Color(1.0, 1.0, 1.0, 0.25)
+
+		loading_label_tween = create_tween()
+		loading_label_tween.set_loops()
+		loading_label_tween.set_trans(Tween.TRANS_SINE)
+		loading_label_tween.set_ease(Tween.EASE_IN_OUT)
+		loading_label_tween.tween_property(loading_label, "modulate:a", 1.0, 0.35)
+		loading_label_tween.tween_property(loading_label, "modulate:a", 0.35, 0.35)
+
+	if loading_overlay_rect == null:
+		await get_tree().create_timer(max(loading_fade_in_duration, 0.01)).timeout
+		return
+
+	var fade_tween := create_tween()
+	fade_tween.set_trans(Tween.TRANS_SINE)
+	fade_tween.set_ease(Tween.EASE_OUT)
+	fade_tween.tween_property(
+		loading_overlay_rect,
+		"color:a",
+		clampf(loading_overlay_target_alpha, 0.0, 1.0),
+		max(loading_fade_in_duration, 0.01)
+	)
+	await fade_tween.finished
+
+
 func _trigger_hit_flash() -> void:
 	hit_flash_time_left = max(hit_flash_duration, 0.01)
 	if hit_flash_rect == null:
 		_setup_hit_flash_overlay()
+
+
+func _update_dash_speedlines() -> void:
+	var density := 0.0
+	if is_dashing:
+		density = clamp(velocity.length() * dash_speedlines_scale, 0.0, dash_speedlines_max_density)
+
+	_set_speedlines_density(density)
+
+
+func _set_speedlines_density(density: float) -> void:
+	if speed_lines == null:
+		return
+
+	var shader_material := speed_lines.material as ShaderMaterial
+	if shader_material == null:
+		return
+
+	shader_material.set_shader_parameter("line_density", density)
 
 
 func _update_hit_flash_overlay(delta: float) -> void:
@@ -823,6 +961,9 @@ func _try_attack() -> void:
 		return
 
 	if equipped_weapon == WeaponType.MAGIC:
+		if not _consume_mana(magic_attack_mana_cost):
+			return
+
 		weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
 		print("Player cast magic")
 		_play_magic_attack_animation()
@@ -915,7 +1056,7 @@ func _fire_crossbow_projectile() -> void:
 	if ranged_bow_template == null:
 		push_warning("Missing ranged projectile template at Head/rangedbow.")
 		return
-	_spawn_projectile_from_template(ranged_bow_template, crossbow_damage, crossbow_projectile_speed, crossbow_projectile_max_distance, crossbow_projectile_collision_mask)
+	_spawn_projectile_from_template(ranged_bow_template, crossbow_damage, crossbow_projectile_speed, crossbow_projectile_max_distance, crossbow_projectile_collision_mask, WeaponType.BOW)
 
 
 func _fire_magic_projectile() -> void:
@@ -923,10 +1064,10 @@ func _fire_magic_projectile() -> void:
 		push_warning("Missing magic projectile template at Head/rangedmagic.")
 		return
 
-	_spawn_projectile_from_template(ranged_magic_template, magic_damage, magic_projectile_speed, magic_projectile_max_distance, magic_projectile_collision_mask)
+	_spawn_projectile_from_template(ranged_magic_template, magic_damage, magic_projectile_speed, magic_projectile_max_distance, magic_projectile_collision_mask, WeaponType.MAGIC)
 
 
-func _spawn_projectile_from_template(template_node: Node3D, projectile_damage: float, projectile_speed: float, projectile_max_distance: float, projectile_collision_mask: int) -> void:
+func _spawn_projectile_from_template(template_node: Node3D, projectile_damage: float, projectile_speed: float, projectile_max_distance: float, projectile_collision_mask: int, source_weapon_type: int = WeaponType.NONE) -> void:
 	var projectile_instance: Node = template_node.duplicate()
 	if projectile_instance == null:
 		return
@@ -943,6 +1084,7 @@ func _spawn_projectile_from_template(template_node: Node3D, projectile_damage: f
 
 	if projectile_node.has_method("set"):
 		projectile_node.set("collision_mask", projectile_collision_mask)
+	projectile_node.set_meta("source_weapon_type", source_weapon_type)
 
 	var launch_dir := -camera_3d.global_basis.z
 	if interact != null and interact.is_colliding():
@@ -1049,6 +1191,14 @@ func _play_post_switch_idle_pose() -> void:
 
 func is_magic_equipped() -> bool:
 	return equipped_weapon == WeaponType.MAGIC
+
+
+func _on_projectile_hit_target(target: Node, source_weapon_type: int = WeaponType.NONE) -> void:
+	if target == null:
+		return
+
+	if source_weapon_type == WeaponType.BOW:
+		emit_signal("bow_hit_landed", target)
 	
 
 ## Checks if some Input Actions haven't been created.

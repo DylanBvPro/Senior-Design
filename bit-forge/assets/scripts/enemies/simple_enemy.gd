@@ -237,7 +237,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 	if amount <= 0.0:
 		return
 
-	var mitigated_damage: float = max(amount - enemy_info.armor, 0.0)
+	var mitigated_damage: float = amount if _is_magic_source(source) else max(amount - enemy_info.armor, 0.0)
 	if mitigated_damage <= 0.0:
 		if source != null and source.is_in_group("player") and not _is_magic_source(source):
 			_apply_hit_reaction()

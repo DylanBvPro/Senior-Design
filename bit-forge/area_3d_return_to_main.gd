@@ -16,6 +16,7 @@ func _on_body_entered(body: Node) -> void:
 		return
 
 	_is_loading_scene = true
+	await _play_loading_transition(body)
 
 	# Prefer explicit file path; fall back to packed scene if provided.
 	if target_scene_path != "":
@@ -31,3 +32,18 @@ func _on_body_entered(body: Node) -> void:
 
 	push_error("No valid target scene configured.")
 	_is_loading_scene = false
+
+
+func _play_loading_transition(body: Node) -> void:
+	if body != null and body.has_method("play_scene_loading_transition"):
+		await body.call("play_scene_loading_transition")
+		return
+
+	if triggering_group != StringName():
+		var grouped_player := get_tree().get_first_node_in_group(triggering_group)
+		if grouped_player != null and grouped_player.has_method("play_scene_loading_transition"):
+			await grouped_player.call("play_scene_loading_transition")
+			return
+
+	# Fallback: tiny delay so transition does not hard-cut even if player script is missing.
+	await get_tree().create_timer(0.1).timeout

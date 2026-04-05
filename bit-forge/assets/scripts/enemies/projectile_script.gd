@@ -87,6 +87,10 @@ func _apply_damage_to_target(target: Node) -> void:
 			target.call("take_damage", damage, source)
 		elif target.has_method("apply_damage"):
 			target.call("apply_damage", damage, source)
+
+		if source.has_method("_on_projectile_hit_target"):
+			var source_weapon_type: Variant = get_meta("source_weapon_type", -1)
+			source.call("_on_projectile_hit_target", target, int(source_weapon_type))
 		return
 
 	if target.is_in_group("player"):
