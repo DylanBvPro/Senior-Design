@@ -1,7 +1,7 @@
 extends TextureProgressBar
 
 @export var player_path: NodePath
-@export_file("*.tscn") var graveyard_scene_path: String = "res://graveyard.tscn"
+@export_file("*.tscn") var death_scene_path: String = "res://assets/sceanes/death_sceane.tscn"
 
 var _player: Node = null
 var _hp_label: Label = null
@@ -11,7 +11,6 @@ var _sent_to_graveyard: bool = false
 func _ready() -> void:
 	_player = _resolve_player()
 	_hp_label = _resolve_label_below()
-	_configure_texture_fill()
 	_sync_from_player()
 
 
@@ -51,8 +50,8 @@ func _sync_from_player() -> void:
 
 	if current_hp_float <= 0.0 and not _sent_to_graveyard:
 		_sent_to_graveyard = true
-		if graveyard_scene_path != "":
-			get_tree().call_deferred("change_scene_to_file", graveyard_scene_path)
+		_capture_last_scene_before_death()
+		call_deferred("_go_to_death_scene")
 
 	if _hp_label != null:
 		_hp_label.text = "%d / %d" % [int(round(current_hp_float)), int(round(max_hp_float))]
@@ -86,8 +85,26 @@ func _resolve_label_below() -> Label:
 	return null
 
 
-func _configure_texture_fill() -> void:
-	# Keep fill driven by texture_progress instead of ProgressBar style overrides.
-	if has_theme_stylebox_override("fill"):
-		remove_theme_stylebox_override("fill")
-	tint_progress = Color(1, 1, 1, 1)
+func _capture_last_scene_before_death() -> void:
+	if not has_node("/root/Messenger"):
+		return
+
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+
+	var scene_path := scene.scene_file_path
+	if scene_path == "" or scene_path == death_scene_path:
+		return
+
+	Messenger.call("set_last_scene_before_death", scene_path)
+
+
+func _go_to_death_scene() -> void:
+	if death_scene_path == "":
+		return
+
+	if _player != null and is_instance_valid(_player) and _player.has_method("play_scene_loading_transition"):
+		await _player.call("play_scene_loading_transition")
+
+	get_tree().change_scene_to_file(death_scene_path)

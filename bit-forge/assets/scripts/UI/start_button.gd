@@ -3,6 +3,7 @@ extends Button
 @export var scene_to_load: String = "res://main.tscn"
 
 func _ready():
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Connect the pressed signal (if not connected in the editor)
 	self.pressed.connect(_on_button_pressed)
 

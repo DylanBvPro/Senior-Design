@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://daxh1as5ublye"]
+[gd_scene load_steps=24 format=3 uid="uid://daxh1as5ublye"]
 
 [ext_resource type="Texture2D" uid="uid://d254mvopdt5uy" path="res://assets/needToBeSorted/models/Finished Models/seamless-pattern-ground-with-stones-brown-soil-texture-for-wallpaper-illustration-backdrop-land-background-for-graphic-design-game-vector.jpg" id="1_rjj1h"]
 [ext_resource type="MeshLibrary" uid="uid://dxtwnwd8k4i8f" path="res://assets/needToBeSorted/simplemeshlib3333.tres" id="1_s4c34"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" uid="uid://bt4as2ksx5y8t" path="res://assets/characters/Mage_enemy.tscn" id="11_f5d6w"]
 [ext_resource type="PackedScene" uid="uid://betm82nub5mou" path="res://assets/characters/Simple_enemy.tscn" id="11_uuk4k"]
 [ext_resource type="PackedScene" uid="uid://dbx53yqxojvk6" path="res://assets/characters/Leader_enemy.tscn" id="12_cx2rr"]
+[ext_resource type="PackedScene" uid="uid://uln5xq0ngkpv" path="res://assets/characters/boss_enemy.tscn" id="13_vnmt6"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_s4c34"]
 sky_horizon_color = Color(1.5513475, 1.5685976, 1.5925975, 1)
@@ -55,6 +56,7 @@ shadow_enabled = true
 
 [node name="ProtoController" parent="." instance=ExtResource("2_s4c34")]
 transform = Transform3D(-0.014852151, 0, -0.9998897, 0, 1, 0, 0.9998897, 0, -0.014852151, -24.903135, 1, 36.44785)
+sword_fire_rate = 0.2
 can_sprint = true
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
@@ -110,6 +112,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -43.100002, 1.2, 65.8)
 
 [node name="Leader_Enemy" parent="NavigationRegion3D" instance=ExtResource("12_cx2rr")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 69)
+
+[node name="Boss_Enemy" parent="NavigationRegion3D" instance=ExtResource("13_vnmt6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.073142, 1.6641941, 34.526203)
 
 [node name="Skeleton_Minion - Copy" parent="." instance=ExtResource("6_rqywu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 1, -1)

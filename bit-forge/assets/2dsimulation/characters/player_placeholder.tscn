@@ -1,9 +1,15 @@
-[gd_scene load_steps=4 format=3 uid="uid://xarv80jqip85"]
+[gd_scene load_steps=7 format=3 uid="uid://xarv80jqip85"]
 
 [ext_resource type="Script" uid="uid://svvkd35b24ct" path="res://assets/2dsimulation/scripts/character_body_2d.gd" id="1_3crjo"]
 [ext_resource type="Texture2D" uid="uid://buovi73470k6k" path="res://assets/textures/download.jpg" id="1_drxm5"]
+[ext_resource type="Script" uid="uid://oafhh4cjfpwq" path="res://assets/2dsimulation/scripts/restart_button_script.gd" id="2_ms1p0"]
+[ext_resource type="Script" uid="uid://cp0ye0sypvyvx" path="res://assets/2dsimulation/scripts/decrease_button_script.gd" id="2_x8oc8"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_3crjo"]
+radius = 2.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_x8oc8"]
+radius = 2.0
 
 [node name="Player" type="Node2D"]
 
@@ -15,8 +21,56 @@ shape = SubResource("CircleShape2D_3crjo")
 
 [node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]
 
+[node name="Control" type="Control" parent="CharacterBody2D/Camera2D"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="increase_total_rooms_button" type="Button" parent="CharacterBody2D/Camera2D/Control"]
+visible = false
+layout_mode = 0
+offset_left = -896.0
+offset_top = -408.0
+offset_right = -720.0
+offset_bottom = -324.0
+text = "Increase Total Rooms"
+
+[node name="restart_button" type="Button" parent="CharacterBody2D/Camera2D/Control"]
+layout_mode = 0
+offset_left = -896.0
+offset_top = -512.0
+offset_right = -720.0
+offset_bottom = -428.0
+text = "Restart"
+script = ExtResource("2_ms1p0")
+
+[node name="decrease_total_rooms_button" type="Button" parent="CharacterBody2D/Camera2D/Control"]
+visible = false
+layout_mode = 0
+offset_left = -896.0
+offset_top = -304.0
+offset_right = -720.0
+offset_bottom = -220.0
+text = "Decrease Total Rooms"
+script = ExtResource("2_x8oc8")
+
 [node name="RayCast2D" type="RayCast2D" parent="CharacterBody2D"]
+collide_with_areas = true
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
 scale = Vector2(0.018229088, 0.018027667)
 texture = ExtResource("1_drxm5")
+
+[node name="hitbox" type="CollisionShape2D" parent="CharacterBody2D"]
+shape = SubResource("CircleShape2D_x8oc8")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="CharacterBody2D"]
+path_desired_distance = 1.0
+path_max_distance = 1000.0
+avoidance_enabled = true
+radius = 107.47
+time_horizon_obstacles = 0.72
+debug_path_custom_point_size = 50.0
+
+[node name="Timer" type="Timer" parent="CharacterBody2D"]

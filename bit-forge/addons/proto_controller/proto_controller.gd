@@ -7,6 +7,9 @@ extends CharacterBody3D
 
 class_name Player
 
+signal sword_hit_landed(target: Node)
+signal bow_hit_landed(target: Node)
+
 @export_group("Stats")
 @export var max_hp: float = 1000.0
 @export var max_armor: float = 50.0
@@ -16,19 +19,52 @@ var current_armor: float = 0
 @export_group("Weapons")
 
 # Weapon types
-enum WeaponType { NONE, SWORD, BOW, MELEE }
+enum WeaponType { NONE, SWORD, BOW, MAGIC, MELEE }
 
 # Weapon data
-var equipped_weapon: WeaponType = WeaponType.NONE
-var weapon_damage: float = 10.0
+@export var sword_damage: float = 5.0
+@export var sword_fire_rate: float = 0.5
+@export var crossbow_damage: float = 2.5
+@export var crossbow_fire_rate: float = 0.8
+@export var crossbow_projectile_speed: float = 24.0
+@export var crossbow_projectile_max_distance: float = 45.0
+@export_flags_3d_physics var crossbow_projectile_collision_mask: int = 3
+@export var crossbow_reload_animation: StringName = "1H_Ranged_Reload"
+@export var crossbow_reload_fallback_duration: float = 0.7
+@export var magic_damage: float = 4.0
+@export var magic_fire_rate: float = 0.6
+@export var magic_projectile_speed: float = 20.0
+@export var magic_projectile_max_distance: float = 40.0
+@export_flags_3d_physics var magic_projectile_collision_mask: int = 3
+@export var max_mana: float = 100.0
+@export var current_mana: float = 100.0
+@export var magic_attack_mana_cost: float = 5.0
+@export var mana_regen_per_second: float = 12.0
+@export var mana_regen_delay: float = 1.25
+@export var shield_block_damage_reduction: float = 0.8
+@export var shield_raise_animation: StringName = "Block_Hit"
+@export var shield_lower_animation: StringName = "1H_Melee_Idle"
+
+var equipped_weapon: WeaponType = WeaponType.SWORD
+var weapon_damage: float = 5.0
 var weapon_fire_rate: float = 0.5  # seconds between shots
 var weapon_last_shot_time: float = 0.0
+var is_crossbow_reloading: bool = false
 
 @export_group("Dash")
 
 @export var dash_duration := 0.18       # how long a dash lasts
 @export var dash_cooldown := 1.0        # seconds before dash can be used again
 @export var max_dash_charges := 3       # total dash charges
+@export var dash_speedlines_scale: float = 0.025
+@export var dash_speedlines_max_density: float = 1.0
+@export var loading_fade_in_duration: float = 0.3
+@export var loading_overlay_target_alpha: float = 1.0
+@export var loading_minimum_duration: float = 1.0
+
+@export_group("Arrows")
+@export var max_arrow_charges: int = 5
+@export var arrow_recharge_cooldown: float = 1.0
 
 
 @export_group("Crouch")
@@ -75,6 +111,9 @@ var weapon_last_shot_time: float = 0.0
 @export var damage_shake_amount: float = 0.06
 @export var camera_lean_max_degrees: float = 3.0
 @export var camera_lean_response_speed: float = 8.0
+@export var hit_flash_duration: float = 0.12
+@export var hit_flash_max_alpha: float = 0.35
+@export var hit_flash_color: Color = Color(1.0, 0.0, 0.0, 1.0)
 
 @export_group("Input Actions")
 ## Name of Input Action to move Left.
@@ -91,8 +130,14 @@ var weapon_last_shot_time: float = 0.0
 @export var input_sprint : String = "sprint"
 ## Name of Input Action to toggle freefly mode.
 @export var input_freefly : String = "freefly"
+## Name of Input Action to toggle between sword and crossbow.
+@export var input_switch_weapon : String = "switch_weapon"
 
 @export var input_crouch: String = "crouch"
+
+@export_group("Mouse")
+@export var capture_mouse_on_ready: bool = true
+@export var enforce_weapon_visual_sync: bool = true
 
 var mouse_captured : bool = false
 var look_rotation : Vector2
@@ -104,18 +149,27 @@ var is_dashing := false
 var dash_direction := Vector3.ZERO
 var dash_recharge_index := -1
 var dash_charges: Array[float] = []
+var arrow_recharge_index := -1
+var arrow_charges: Array[float] = []
+var mana_regen_delay_remaining: float = 0.0
 var combo_speed_multiplier: float = 1.0
 var damage_knockback_velocity := Vector3.ZERO
 var camera_bob_time: float = 0.0
 var damage_shake_time_left: float = 0.0
 var damage_shake_strength: float = 0.0
+var hit_flash_time_left: float = 0.0
 var camera_base_position: Vector3 = Vector3.ZERO
 var camera_base_rotation: Vector3 = Vector3.ZERO
 var camera_lean_current: float = 0.0
 
 var is_crouching: bool = false
+var is_shield_blocking: bool = false
 var normal_collider_height: float
 var normal_camera_height: Vector3
+var sword_model_default_transform: Transform3D
+var crossbow_model_default_transform: Transform3D
+var magic_model_default_transform: Transform3D
+var shield_model_default_transform: Transform3D
 
 
 ## IMPORTANT REFERENCES
@@ -123,13 +177,26 @@ var normal_camera_height: Vector3
 @onready var camera_3d: Camera3D = $Head/Camera3D
 @onready var collider: CollisionShape3D = $Collider
 @onready var sprint_bar_root: CanvasLayer = $"Head/Camera3D/SprintUI"
+@onready var arrow_bar_root: CanvasLayer = $"CanvasLayer"
 @onready var weapon_anim: AnimationPlayer = $"AnimationPlayer"
 @onready var health_bar: ProgressBar = $"Head/Camera3D/HealthUI/HpBar"
 @onready var health_label: Label = $"Head/Camera3D/HealthUI/HpBar/HpLabel"
+@onready var sword_model: Node3D = $"Rig/Skeleton3D/handslot_r/1H_Sword"
+@onready var crossbow_model: Node3D = $"Rig/Skeleton3D/handslot_r/1H_Crossbow"
+@onready var magic_model: Node3D = $"Rig/Skeleton3D/handslot_r/spellbook_open3"
+@onready var shield_model: Node3D = $"Rig/Skeleton3D/handslot_r/shield_badge"
 @onready var sword_hitbox: Area3D = $"Rig/Skeleton3D/handslot_r/1H_Sword/Sword HitBox"
+@onready var ranged_bow_template: Node3D = get_node_or_null("Head/rangedbow")
+@onready var ranged_magic_template: Node3D = get_node_or_null("Head/rangedmagic")
 @onready var interact:RayCast3D = $Head/Camera3D/RayCast3D
+@onready var speed_lines: ColorRect = $"Head/Camera3D/Control/SpeedLines"
+@onready var loading_ui: CanvasLayer = get_node_or_null("Head/Camera3D/LoadingUI")
+@onready var loading_label: Label = get_node_or_null("Head/Camera3D/LoadingUI/Label")
 
 var focusedObject: Interactable
+var hit_flash_rect: ColorRect = null
+var loading_overlay_rect: ColorRect = null
+var loading_label_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("player")
@@ -148,6 +215,11 @@ func _ready() -> void:
 		dash_charges.append(1.0)
 	_configure_dash_bars()
 
+	arrow_charges = []
+	for i in range(max_arrow_charges):
+		arrow_charges.append(1.0)
+	_configure_arrow_bars()
+
 	
 	normal_collider_height = collider.shape.height
 	normal_camera_height = head.position
@@ -156,14 +228,43 @@ func _ready() -> void:
 	current_hp = current_hp
 	current_armor = current_armor
 	_update_health_bar()
+	if sword_model:
+		sword_model_default_transform = sword_model.transform
+	if crossbow_model:
+		crossbow_model_default_transform = crossbow_model.transform
+	if magic_model:
+		magic_model_default_transform = magic_model.transform
+	if shield_model:
+		shield_model_default_transform = shield_model.transform
+	current_mana = clamp(current_mana, 0.0, max(max_mana, 0.0))
+	mana_regen_delay_remaining = 0.0
+	_apply_equipped_weapon_state()
+
+	if weapon_anim:
+		weapon_anim.animation_started.connect(_on_weapon_animation_changed)
+		weapon_anim.animation_finished.connect(_on_weapon_animation_changed)
+	call_deferred("_sync_equipped_weapon_visuals")
+	_setup_hit_flash_overlay()
+	_setup_loading_ui_overlay()
+	_set_speedlines_density(0.0)
+
+	if capture_mouse_on_ready:
+		capture_mouse()
 
 func _on_sword_body_entered(body: Node):
+	var switch_target := _find_weapon_switch_target(body)
+	if switch_target != null:
+		_on_weapon_switch_hit(switch_target)
+		return
+
 	# Check if the body is an enemy and has an apply_damage function
 	print("body: ", body)
 	if body.has_method("apply_damage"):
 		print("Hit enemy:", body.name)
+		emit_signal("sword_hit_landed", body)
 		body.apply_damage(weapon_damage, self)
 	elif body.has_method("take_damage"):
+		emit_signal("sword_hit_landed", body)
 		body.take_damage(weapon_damage, self)
 		
 func _enable_sword_hitbox():
@@ -192,12 +293,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	
 	# Look around
 	if mouse_captured and event is InputEventMouseMotion:
-		rotate_look(event.relative)
+		rotate_look(event.relative * 0.1)
 	
 		# ATTACK (left click)
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			_try_attack()
+
+	if InputMap.has_action(input_switch_weapon) and Input.is_action_just_pressed(input_switch_weapon):
+		toggle_weapon()
 			
 	# Toggle freefly mode
 	if can_freefly and Input.is_action_just_pressed(input_freefly):
@@ -221,6 +325,16 @@ func find_interactable(node: Node) -> Interactable:
 	return null
 
 func _process(delta):
+	_update_shield_block_state(delta)
+
+	if enforce_weapon_visual_sync:
+		_sync_equipped_weapon_visuals()
+
+	if equipped_weapon == WeaponType.MAGIC and mouse_captured and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_try_attack()
+
+	_update_hit_flash_overlay(delta)
+
 	_update_camera_effects(delta)
 
 	if interact.is_colliding():
@@ -249,6 +363,8 @@ func _clear_focus():
 		
 func _physics_process(delta: float) -> void:
 	_update_dash_recharge(delta)
+	_update_arrow_recharge(delta)
+	_update_mana_regen(delta)
 
 	if is_dashing:
 		dash_time_left -= delta
@@ -275,6 +391,7 @@ func _physics_process(delta: float) -> void:
 	# Trigger dash on sprint input if at least one full charge is available.
 	if can_sprint and Input.is_action_just_pressed(input_sprint) and not is_crouching:
 		if _consume_dash_charge():
+			_set_shield_blocking(false)
 			is_dashing = true
 			dash_time_left = dash_duration
 			var dash_input := Input.get_vector(input_left, input_right, input_forward, input_back)
@@ -309,6 +426,7 @@ func _physics_process(delta: float) -> void:
 	
 	# Use velocity to actually move
 	move_and_slide()
+	_update_dash_speedlines()
 
 	_update_dash_bars()
 		
@@ -317,6 +435,7 @@ func _physics_process(delta: float) -> void:
 		if Input.is_action_pressed(input_crouch):
 			if not is_crouching:
 				is_crouching = true
+				_set_shield_blocking(false)
 				move_speed = crouch_speed
 				is_dashing = false
 				dash_time_left = 0.0
@@ -344,7 +463,7 @@ func add_dash_charge(amount: int = 1) -> void:
 		return
 
 	for i in range(amount):
-		var refill_index := _find_highest_missing_dash_charge()
+		var refill_index := _find_first_missing_dash_charge()
 		if refill_index == -1:
 			break
 
@@ -355,9 +474,57 @@ func add_dash_charge(amount: int = 1) -> void:
 	_update_dash_bars()
 
 
-func _find_highest_missing_dash_charge() -> int:
-	for i in range(dash_charges.size() - 1, -1, -1):
+func _find_first_missing_dash_charge() -> int:
+	for i in range(dash_charges.size()):
 		if dash_charges[i] < 1.0:
+			return i
+	return -1
+
+
+func _get_total_dash_charge() -> float:
+	var total := 0.0
+	for charge in dash_charges:
+		total += clampf(charge, 0.0, 1.0)
+	return total
+
+
+func _drain_dash_charge(amount: float) -> float:
+	if amount <= 0.0:
+		return 0.0
+
+	var remaining := amount
+	for i in range(dash_charges.size() - 1, -1, -1):
+		if remaining <= 0.0:
+			break
+		if dash_charges[i] <= 0.0:
+			continue
+
+		var consumed := min(dash_charges[i], remaining)
+		dash_charges[i] -= consumed
+		remaining -= consumed
+
+	return amount - remaining
+
+
+func add_arrow_charge(amount: int = 1) -> void:
+	if amount <= 0 or arrow_charges.is_empty():
+		return
+
+	for i in range(amount):
+		var refill_index := _find_first_missing_arrow_charge()
+		if refill_index == -1:
+			break
+
+		arrow_charges[refill_index] = 1.0
+		if arrow_recharge_index == refill_index:
+			arrow_recharge_index = -1
+
+	_update_arrow_bars()
+
+
+func _find_first_missing_arrow_charge() -> int:
+	for i in range(arrow_charges.size()):
+		if arrow_charges[i] < 1.0:
 			return i
 	return -1
 
@@ -438,14 +605,133 @@ func _find_next_recharge_index() -> int:
 	return -1
 
 
+func _configure_arrow_bars() -> void:
+	if not arrow_bar_root:
+		return
+
+	for bar in _get_arrow_bars_in_ui_order():
+		bar.min_value = 0.0
+		bar.max_value = 100.0
+
+	_update_arrow_bars()
+
+
+func _update_arrow_bars() -> void:
+	if not arrow_bar_root:
+		return
+
+	var bars := _get_arrow_bars_in_ui_order()
+
+	for i in range(bars.size()):
+		if i < arrow_charges.size():
+			bars[i].value = clamp(arrow_charges[i] * 100.0, 0.0, 100.0)
+
+
+func _get_arrow_bars_in_ui_order() -> Array[TextureProgressBar]:
+	var bars: Array[TextureProgressBar] = []
+	if not arrow_bar_root:
+		return bars
+
+	for child in arrow_bar_root.get_children():
+		if child is TextureProgressBar and child.name.begins_with("TextureProgressBar"):
+			bars.append(child)
+
+	return bars
+
+
+func _consume_arrow_charge() -> bool:
+	for i in range(arrow_charges.size() - 1, -1, -1):
+		if arrow_charges[i] >= 1.0:
+			# If an arrow is currently recharging, cancel that progress.
+			if arrow_recharge_index >= 0 and arrow_recharge_index < arrow_charges.size() and arrow_charges[arrow_recharge_index] < 1.0:
+				arrow_charges[arrow_recharge_index] = 0.0
+			arrow_recharge_index = -1
+
+			arrow_charges[i] = 0.0
+			_update_arrow_bars()
+			return true
+
+	return false
+
+
+func _update_arrow_recharge(delta: float) -> void:
+	if arrow_charges.is_empty():
+		return
+
+	if arrow_recharge_index == -1:
+		arrow_recharge_index = _find_next_arrow_recharge_index()
+
+	if arrow_recharge_index == -1:
+		return
+
+	if arrow_recharge_cooldown <= 0.0:
+		arrow_charges[arrow_recharge_index] = 1.0
+		arrow_recharge_index = -1
+		_update_arrow_bars()
+		return
+
+	arrow_charges[arrow_recharge_index] = min(arrow_charges[arrow_recharge_index] + (delta / arrow_recharge_cooldown), 1.0)
+	if arrow_charges[arrow_recharge_index] >= 1.0:
+		arrow_recharge_index = -1
+
+	_update_arrow_bars()
+
+
+func _find_next_arrow_recharge_index() -> int:
+	for i in range(arrow_charges.size()):
+		if arrow_charges[i] < 1.0:
+			return i
+	return -1
+
+
+func get_arrow_charges() -> Array[float]:
+	return arrow_charges.duplicate()
+
+
+func _consume_mana(amount: float) -> bool:
+	if amount <= 0.0:
+		return true
+
+	if current_mana < amount:
+		return false
+
+	current_mana = clamp(current_mana - amount, 0.0, max(max_mana, 0.0))
+	mana_regen_delay_remaining = max(mana_regen_delay, 0.0)
+	return true
+
+
+func _update_mana_regen(delta: float) -> void:
+	if current_mana >= max_mana:
+		mana_regen_delay_remaining = 0.0
+		return
+
+	if mana_regen_delay_remaining > 0.0:
+		mana_regen_delay_remaining = max(mana_regen_delay_remaining - delta, 0.0)
+		return
+
+	if mana_regen_per_second <= 0.0:
+		return
+
+	current_mana = min(current_mana + (mana_regen_per_second * delta), max_mana)
+
+
+func get_mana_percentage() -> float:
+	if max_mana <= 0.0:
+		return 0.0
+	return clamp((current_mana / max_mana) * 100.0, 0.0, 100.0)
+
+
 # --------------------
 # Health Functions
 # --------------------
 func apply_damage(amount: float, source: Node = null) -> void:
 	var final_damage = max(amount - current_armor, 0)
+	if is_shield_blocking and equipped_weapon == WeaponType.SWORD:
+		final_damage *= maxf(1.0 - clampf(shield_block_damage_reduction, 0.0, 1.0), 0.0)
 	if final_damage > 0.0:
 		_play_hurt_animation()
 		_trigger_damage_camera_shake()
+		_trigger_hit_flash()
 		_apply_damage_knockback(source)
 	current_hp = clamp(current_hp - final_damage, 0, max_hp)
 	_update_health_bar()
@@ -484,7 +770,11 @@ func _apply_damage_knockback(source: Node = null) -> void:
 	if away_dir.length_squared() <= 0.0001:
 		away_dir = transform.basis.z
 	away_dir = away_dir.normalized()
-	damage_knockback_velocity = away_dir * damage_knockback_speed
+	var knockback_multiplier: float = 1.0
+	if source != null and source.has_method("get_player_knockback_multiplier"):
+		knockback_multiplier = maxf(float(source.call("get_player_knockback_multiplier")), 0.0)
+
+	damage_knockback_velocity = away_dir * (damage_knockback_speed * knockback_multiplier)
 
 
 func _play_hurt_animation() -> void:
@@ -502,6 +792,139 @@ func _play_hurt_animation() -> void:
 func _trigger_damage_camera_shake() -> void:
 	damage_shake_time_left = damage_shake_duration
 	damage_shake_strength = damage_shake_amount
+
+
+func _setup_hit_flash_overlay() -> void:
+	if hit_flash_rect != null:
+		return
+
+	var flash_layer := CanvasLayer.new()
+	flash_layer.layer = 100
+	add_child(flash_layer)
+
+	hit_flash_rect = ColorRect.new()
+	hit_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hit_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hit_flash_rect.visible = false
+	flash_layer.add_child(hit_flash_rect)
+
+
+func _setup_loading_ui_overlay() -> void:
+	if loading_ui == null:
+		return
+
+	loading_ui.layer = 500
+	loading_ui.visible = false
+
+	if loading_overlay_rect != null:
+		return
+
+	loading_overlay_rect = ColorRect.new()
+	loading_overlay_rect.name = "LoadingFadeOverlay"
+	loading_overlay_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	loading_overlay_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	loading_overlay_rect.color = Color(0.0, 0.0, 0.0, 0.0)
+	loading_ui.add_child(loading_overlay_rect)
+	loading_ui.move_child(loading_overlay_rect, 0)
+
+	if loading_label != null:
+		loading_label.visible = false
+		loading_label.z_index = 10
+		loading_label.modulate = Color(1.0, 1.0, 1.0, 0.2)
+
+
+func play_scene_loading_transition() -> void:
+	var transition_start_time: int = Time.get_ticks_msec()
+	var minimum_duration: float = maxf(loading_minimum_duration, 0.0)
+
+	if loading_ui == null:
+		if minimum_duration > 0.0:
+			await get_tree().create_timer(minimum_duration).timeout
+		return
+
+	if loading_label_tween != null and loading_label_tween.is_running():
+		loading_label_tween.kill()
+
+	loading_ui.visible = true
+
+	if loading_overlay_rect != null:
+		loading_overlay_rect.color = Color(0.0, 0.0, 0.0, 0.0)
+
+	if loading_label != null:
+		loading_label.visible = true
+		loading_label.text = "Loading"
+		loading_label.modulate = Color(1.0, 1.0, 1.0, 0.25)
+
+		loading_label_tween = create_tween()
+		loading_label_tween.set_loops()
+		loading_label_tween.set_trans(Tween.TRANS_SINE)
+		loading_label_tween.set_ease(Tween.EASE_IN_OUT)
+		loading_label_tween.tween_property(loading_label, "modulate:a", 1.0, 0.35)
+		loading_label_tween.tween_property(loading_label, "modulate:a", 0.35, 0.35)
+
+	if loading_overlay_rect == null:
+		await get_tree().create_timer(max(loading_fade_in_duration, 0.01)).timeout
+		var elapsed_no_overlay: float = float(Time.get_ticks_msec() - transition_start_time) / 1000.0
+		var remaining_no_overlay: float = minimum_duration - elapsed_no_overlay
+		if remaining_no_overlay > 0.0:
+			await get_tree().create_timer(remaining_no_overlay).timeout
+		return
+
+	var fade_tween := create_tween()
+	fade_tween.set_trans(Tween.TRANS_SINE)
+	fade_tween.set_ease(Tween.EASE_OUT)
+	fade_tween.tween_property(
+		loading_overlay_rect,
+		"color:a",
+		clampf(loading_overlay_target_alpha, 0.0, 1.0),
+		max(loading_fade_in_duration, 0.01)
+	)
+	await fade_tween.finished
+
+	var elapsed: float = float(Time.get_ticks_msec() - transition_start_time) / 1000.0
+	var remaining: float = minimum_duration - elapsed
+	if remaining > 0.0:
+		await get_tree().create_timer(remaining).timeout
+
+
+func _trigger_hit_flash() -> void:
+	hit_flash_time_left = max(hit_flash_duration, 0.01)
+	if hit_flash_rect == null:
+		_setup_hit_flash_overlay()
+
+
+func _update_dash_speedlines() -> void:
+	var density := 0.0
+	if is_dashing:
+		density = clamp(velocity.length() * dash_speedlines_scale, 0.0, dash_speedlines_max_density)
+
+	_set_speedlines_density(density)
+
+
+func _set_speedlines_density(density: float) -> void:
+	if speed_lines == null:
+		return
+
+	var shader_material := speed_lines.material as ShaderMaterial
+	if shader_material == null:
+		return
+
+	shader_material.set_shader_parameter("line_density", density)
+
+
+func _update_hit_flash_overlay(delta: float) -> void:
+	if hit_flash_rect == null:
+		return
+
+	if hit_flash_time_left > 0.0:
+		hit_flash_time_left = max(hit_flash_time_left - delta, 0.0)
+		var fade: float = hit_flash_time_left / maxf(hit_flash_duration, 0.01)
+		var flash: Color = hit_flash_color
+		flash.a = clamp(hit_flash_max_alpha * fade, 0.0, 1.0)
+		hit_flash_rect.color = flash
+		hit_flash_rect.visible = true
+	elif hit_flash_rect.visible:
+		hit_flash_rect.visible = false
 
 
 func _update_camera_effects(delta: float) -> void:
@@ -576,25 +999,333 @@ func release_mouse():
 	mouse_captured = false
 
 func can_attack() -> bool:
+	if equipped_weapon == WeaponType.BOW and is_crossbow_reloading:
+		return false
 	return Time.get_ticks_msec() / 1000.0 - weapon_last_shot_time >= weapon_fire_rate
 	
 func _try_attack() -> void:
 	if not can_attack():
 		return
 
+	# Shield block is a defensive stance; disable attacks while it is active.
+	if equipped_weapon == WeaponType.SWORD and is_shield_blocking:
+		return
+
+	if equipped_weapon == WeaponType.BOW:
+		if not _consume_arrow_charge():
+			return
+
+		weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
+		print("Player fired crossbow")
+		_play_crossbow_attack_animation()
+		_fire_crossbow_projectile()
+		_start_crossbow_reload()
+		return
+
+	if equipped_weapon == WeaponType.MAGIC:
+		if not _consume_mana(magic_attack_mana_cost):
+			return
+
+		weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
+		print("Player cast magic")
+		_play_magic_attack_animation()
+		_fire_magic_projectile()
+		return
+
 	weapon_last_shot_time = Time.get_ticks_msec() / 1000.0
+
 	print("Player Swung Sword")
-	
-	if weapon_anim:
-		weapon_anim.stop()
-		weapon_anim.play("1H_Melee_Attack_Slice_Horizontal")
+	_play_sword_attack_animation()
 
 	# Enable hitbox briefly
 	_enable_sword_hitbox()
-	await get_tree().create_timer(0.1).timeout  # hit window duration
+	await get_tree().create_timer(0.18).timeout  # hit window duration
 	_disable_sword_hitbox()
 
 	# Optional: apply damage here later (raycast / melee hitbox)
+
+
+func equip_sword() -> void:
+	equipped_weapon = WeaponType.SWORD
+	_apply_equipped_weapon_state()
+	_on_weapon_switched()
+
+
+func equip_crossbow() -> void:
+	equipped_weapon = WeaponType.BOW
+	_apply_equipped_weapon_state()
+	_on_weapon_switched()
+
+
+func toggle_weapon() -> void:
+	if equipped_weapon == WeaponType.SWORD:
+		equip_crossbow()
+	elif equipped_weapon == WeaponType.BOW:
+		equip_magic()
+	else:
+		equip_sword()
+
+
+func _play_sword_attack_animation() -> void:
+	if not weapon_anim:
+		return
+
+	weapon_anim.stop()
+	if weapon_anim.has_animation("1H_Melee_Attack_Slice_Horizontal"):
+		weapon_anim.play("1H_Melee_Attack_Slice_Horizontal")
+
+
+func _play_crossbow_attack_animation() -> void:
+	if not weapon_anim:
+		return
+
+	weapon_anim.stop()
+	if weapon_anim.has_animation("1H_Ranged_Shoot"):
+		weapon_anim.play("1H_Ranged_Shoot")
+	elif weapon_anim.has_animation("1H_Ranged_Shooting"):
+		weapon_anim.play("1H_Ranged_Shooting")
+
+
+func _play_magic_attack_animation() -> void:
+	if not weapon_anim:
+		return
+
+	weapon_anim.stop()
+	if weapon_anim.has_animation("Spellcast_Shoot"):
+		weapon_anim.play("Spellcast_Shoot")
+	elif weapon_anim.has_animation("1H_Ranged_Shoot"):
+		weapon_anim.play("1H_Ranged_Shoot")
+
+
+func _start_crossbow_reload() -> void:
+	if is_crossbow_reloading:
+		return
+
+	is_crossbow_reloading = true
+	var reload_duration := max(crossbow_reload_fallback_duration, 0.01)
+
+	if weapon_anim and weapon_anim.has_animation(crossbow_reload_animation):
+		weapon_anim.play(crossbow_reload_animation)
+		var reload_anim := weapon_anim.get_animation(crossbow_reload_animation)
+		if reload_anim:
+			reload_duration = max(reload_anim.length, 0.01)
+
+	await get_tree().create_timer(reload_duration).timeout
+	is_crossbow_reloading = false
+
+
+func _fire_crossbow_projectile() -> void:
+	if ranged_bow_template == null:
+		push_warning("Missing ranged projectile template at Head/rangedbow.")
+		return
+	_spawn_projectile_from_template(ranged_bow_template, crossbow_damage, crossbow_projectile_speed, crossbow_projectile_max_distance, crossbow_projectile_collision_mask, WeaponType.BOW)
+
+
+func _fire_magic_projectile() -> void:
+	if ranged_magic_template == null:
+		push_warning("Missing magic projectile template at Head/rangedmagic.")
+		return
+
+	_spawn_projectile_from_template(ranged_magic_template, magic_damage, magic_projectile_speed, magic_projectile_max_distance, magic_projectile_collision_mask, WeaponType.MAGIC)
+
+
+func _spawn_projectile_from_template(template_node: Node3D, projectile_damage: float, projectile_speed: float, projectile_max_distance: float, projectile_collision_mask: int, source_weapon_type: int = WeaponType.NONE) -> void:
+	var projectile_instance: Node = template_node.duplicate()
+	if projectile_instance == null:
+		return
+	if projectile_instance is not Node3D:
+		projectile_instance.queue_free()
+		return
+
+	var projectile_node := projectile_instance as Node3D
+	projectile_node.visible = true
+	projectile_node.global_transform = template_node.global_transform
+
+	var spawn_parent := get_tree().current_scene if get_tree().current_scene != null else get_parent()
+	spawn_parent.add_child(projectile_node)
+
+	if projectile_node.has_method("set"):
+		projectile_node.set("collision_mask", projectile_collision_mask)
+	projectile_node.set_meta("source_weapon_type", source_weapon_type)
+	projectile_node.set_meta("intended_target", _get_projectile_intended_target())
+
+	var launch_dir := -camera_3d.global_basis.z
+	if interact != null and interact.is_colliding():
+		launch_dir = interact.get_collision_point() - projectile_node.global_position
+	if launch_dir.length_squared() < 0.0001:
+		launch_dir = -camera_3d.global_basis.z
+	launch_dir = launch_dir.normalized()
+
+	if projectile_node.has_method("launch"):
+		projectile_node.call("launch", launch_dir, projectile_damage, self, projectile_speed, projectile_max_distance)
+
+
+func _get_projectile_intended_target() -> Node:
+	if interact == null or not interact.is_colliding():
+		return null
+
+	var collider := interact.get_collider()
+	if collider == null or collider is not Node:
+		return null
+
+	var current := collider as Node
+	while current != null:
+		if current.has_method("take_damage") or current.has_method("apply_damage"):
+			return current
+		current = current.get_parent()
+
+	return null
+
+
+func _find_weapon_switch_target(node: Node) -> Node:
+	var current := node
+	while current != null:
+		if current.is_in_group("weapon_switch"):
+			return current
+		current = current.get_parent()
+	return null
+
+
+func _on_weapon_switch_hit(switch_target: Node) -> void:
+	equip_crossbow()
+
+	if switch_target.has_method("on_player_weapon_hit"):
+		switch_target.call("on_player_weapon_hit", self)
+	elif switch_target.has_method("activate_switch"):
+		switch_target.call("activate_switch", self)
+
+
+func _apply_equipped_weapon_state() -> void:
+	if equipped_weapon == WeaponType.BOW:
+		weapon_damage = crossbow_damage
+		weapon_fire_rate = crossbow_fire_rate
+	elif equipped_weapon == WeaponType.MAGIC:
+		weapon_damage = magic_damage
+		weapon_fire_rate = magic_fire_rate
+	else:
+		# Default NONE/MELEE to sword visuals for now.
+		equipped_weapon = WeaponType.SWORD
+		weapon_damage = sword_damage
+		weapon_fire_rate = sword_fire_rate
+
+	_sync_equipped_weapon_visuals()
+	_disable_sword_hitbox()
+
+
+func equip_magic() -> void:
+	equipped_weapon = WeaponType.MAGIC
+	_apply_equipped_weapon_state()
+	_on_weapon_switched()
+
+
+func _sync_equipped_weapon_visuals() -> void:
+	if sword_model:
+		sword_model.visible = equipped_weapon == WeaponType.SWORD and not is_shield_blocking
+		sword_model.transform = sword_model_default_transform
+	if crossbow_model:
+		crossbow_model.visible = equipped_weapon == WeaponType.BOW
+		crossbow_model.transform = crossbow_model_default_transform
+	if magic_model:
+		magic_model.visible = equipped_weapon == WeaponType.MAGIC
+		magic_model.transform = magic_model_default_transform
+	if shield_model:
+		shield_model.visible = equipped_weapon == WeaponType.SWORD and is_shield_blocking
+		shield_model.transform = shield_model_default_transform
+
+
+func _on_weapon_animation_changed(_anim_name: StringName) -> void:
+	# Some animations key visibility tracks; force equipped visuals right after changes.
+	call_deferred("_sync_equipped_weapon_visuals")
+
+
+func _on_weapon_switched() -> void:
+	if weapon_anim:
+		# Stop whatever attack animation was active so old pose doesn't persist.
+		weapon_anim.stop()
+		_play_post_switch_idle_pose()
+
+	# Enforce visuals at end-of-frame after AnimationPlayer updates.
+	call_deferred("_sync_equipped_weapon_visuals")
+
+
+func _play_post_switch_idle_pose() -> void:
+	if not weapon_anim:
+		return
+
+	if equipped_weapon == WeaponType.BOW and weapon_anim.has_animation("1H_Ranged_Shoot"):
+		weapon_anim.play("1H_Ranged_Shoot")
+		weapon_anim.advance(0.0)
+		return
+
+	if equipped_weapon == WeaponType.MAGIC and weapon_anim.has_animation("Spellcast_Shoot"):
+		weapon_anim.play("Spellcast_Shoot")
+		weapon_anim.advance(0.0)
+		return
+
+	if equipped_weapon == WeaponType.SWORD and weapon_anim.has_animation("1H_Melee_Idle"):
+		weapon_anim.play("1H_Melee_Idle")
+		weapon_anim.advance(0.0)
+		return
+
+	if weapon_anim.has_animation("Idle"):
+		weapon_anim.play("Idle")
+		weapon_anim.advance(0.0)
+
+
+func _play_shield_swap_animation(blocking_active: bool) -> void:
+	if not weapon_anim:
+		return
+
+	var animation_name: StringName = shield_raise_animation if blocking_active else shield_lower_animation
+	if animation_name != StringName("") and weapon_anim.has_animation(animation_name):
+		weapon_anim.stop()
+		weapon_anim.play(animation_name)
+		return
+
+	if blocking_active and weapon_anim.has_animation("Block_Hit"):
+		weapon_anim.stop()
+		weapon_anim.play("Block_Hit")
+		return
+
+	if not blocking_active and weapon_anim.has_animation("1H_Melee_Idle"):
+		weapon_anim.stop()
+		weapon_anim.play("1H_Melee_Idle")
+
+
+func _set_shield_blocking(blocking_active: bool) -> void:
+	if is_shield_blocking == blocking_active:
+		return
+
+	is_shield_blocking = blocking_active
+	_play_shield_swap_animation(blocking_active)
+	_sync_equipped_weapon_visuals()
+
+
+func _update_shield_block_state(_delta: float) -> void:
+	var wants_block := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	var can_block := equipped_weapon == WeaponType.SWORD and not is_dashing and not freeflying
+
+	if wants_block and can_block:
+		if not is_shield_blocking:
+			# Consume one full dash charge only when shield is first raised.
+			if _consume_dash_charge():
+				_set_shield_blocking(true)
+			else:
+				_set_shield_blocking(false)
+	else:
+		_set_shield_blocking(false)
+
+
+func is_magic_equipped() -> bool:
+	return equipped_weapon == WeaponType.MAGIC
+
+
+func _on_projectile_hit_target(target: Node, source_weapon_type: int = WeaponType.NONE) -> void:
+	if target == null:
+		return
+
+	if source_weapon_type == WeaponType.BOW:
+		emit_signal("bow_hit_landed", target)
 	
 
 ## Checks if some Input Actions haven't been created.

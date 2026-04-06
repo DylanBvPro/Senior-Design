@@ -3,6 +3,7 @@ extends Label
 @export var combo_timeout_seconds: float = 10.0
 @export var speed_bonus_per_stack: float = 0.10
 @export var player_path: NodePath
+@export var max_combo_stacks: int = 25
 
 var combo_count: int = 0
 var combo_time_remaining: float = 0.0
@@ -28,11 +29,17 @@ func _process(delta: float) -> void:
 
 
 func _on_enemy_killed_by_player(_enemy: Node) -> void:
-	combo_count += 1
+	_add_combo_stack()
+
+
+func _add_combo_stack() -> void:
+	combo_count = min(combo_count + 1, max(max_combo_stacks, 1))
 	text = str(combo_count) + "x"
 	combo_time_remaining = combo_timeout_seconds
 
-	if player and player.has_method("add_dash_charge"):
+	if player and player.has_method("add_arrow_charge"):
+		player.call("add_arrow_charge", 1)
+	elif player and player.has_method("add_dash_charge"):
 		player.call("add_dash_charge", 1)
 
 	_apply_player_combo_bonus()
