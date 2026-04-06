@@ -4,13 +4,9 @@ signal enemy_spawned(enemy: Node, enemy_name: String)
 
 const ENEMY_SPAWN_SCRIPT_NAME := "enemy_spawn_script.gd"
 
-## Whether to spawn the enemy on ready
-@export var spawn_on_ready: bool = true
-
-
-func _ready() -> void:
-	if spawn_on_ready:
-		activate()
+## Whether to spawn the enemy on ready.
+## Kept for inspector compatibility, but spawning is activate-only.
+@export var spawn_on_ready: bool = false
 
 
 ## Activates enemy spawn scripts below this node and returns the first spawned enemy.

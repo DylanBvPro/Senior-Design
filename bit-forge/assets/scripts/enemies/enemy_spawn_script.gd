@@ -5,16 +5,12 @@ signal enemy_spawned(enemy: Node, enemy_name: String)
 ## The enemy scene to spawn
 @export var enemy_scene: PackedScene
 
-## Whether to spawn the enemy on ready
-@export var spawn_on_ready: bool = true
+## Whether to spawn the enemy on ready.
+## Kept for inspector compatibility, but spawning is activate-only.
+@export var spawn_on_ready: bool = false
 
 ## Parent node to add the spawned enemy to (defaults to parent of this node)
 @export var spawn_parent: Node3D
-
-
-func _ready() -> void:
-	if spawn_on_ready:
-		spawn_enemy()
 
 
 ## Spawns an enemy at this node's position

@@ -5,6 +5,9 @@ extends CollisionShape3D
 @export var fade_in_seconds: float = 0.4
 @export var fade_out_seconds: float = 0.5
 @export var trigger_once: bool = false
+@export var activate_script_target: bool = false
+@export var script_target_path: NodePath
+@export var script_target_method: StringName = "activate"
 @export var debug_logs_enabled: bool = true
 
 var _label: Label
@@ -17,10 +20,9 @@ func _ready() -> void:
 	_label = _resolve_label()
 	if _label == null:
 		push_warning("text_load_script: Could not find a Label target.")
-		return
-
-	_label.visible = false
-	_set_label_alpha(0.0)
+	else:
+		_label.visible = false
+		_set_label_alpha(0.0)
 
 	var trigger_area := _resolve_trigger_area()
 	if trigger_area == null:
@@ -49,13 +51,16 @@ func _on_body_entered(body: Node) -> void:
 
 
 func _show_text_sequence() -> void:
-	if _label == null:
-		return
 	if _is_playing:
 		return
 
-	_is_playing = true
 	_has_triggered = true
+	_activate_script_target()
+
+	if _label == null:
+		return
+
+	_is_playing = true
 
 	if _current_tween and _current_tween.is_running():
 		_current_tween.kill()
@@ -73,6 +78,32 @@ func _show_text_sequence() -> void:
 
 	_label.visible = false
 	_is_playing = false
+
+
+func _activate_script_target() -> void:
+	if not activate_script_target:
+		return
+
+	if script_target_path == NodePath(""):
+		if debug_logs_enabled:
+			push_warning("text_load_script: Script target is enabled but no node path is assigned.")
+		return
+
+	var script_target := get_node_or_null(script_target_path)
+	if script_target == null:
+		if debug_logs_enabled:
+			push_warning("text_load_script: Script target not found: %s" % script_target_path)
+		return
+
+	if script_target_method == StringName(""):
+		if debug_logs_enabled:
+			push_warning("text_load_script: Script target method is empty.")
+		return
+
+	if script_target.has_method(String(script_target_method)):
+		script_target.call(String(script_target_method))
+	elif debug_logs_enabled:
+		push_warning("text_load_script: Target %s does not have method %s." % [script_target.name, script_target_method])
 
 
 func _resolve_label() -> Label:

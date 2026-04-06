@@ -2,8 +2,15 @@ extends Node3D
 
 signal all_descendant_enemies_dead
 
+enum TriggerMode {
+	ENEMY_TRACKING_ONLY,
+	EXTERNAL_ONLY,
+	ENEMY_OR_EXTERNAL
+}
+
 @export var activation_target_paths: Array[NodePath] = []
 @export var activation_method: StringName = "activate"
+@export var trigger_mode: TriggerMode = TriggerMode.ENEMY_TRACKING_ONLY
 @export var monitor_interval_seconds: float = 0.25
 @export var require_at_least_one_enemy: bool = true
 @export var tracked_enemy_paths: Array[NodePath] = []
@@ -19,11 +26,14 @@ var _has_activated: bool = false
 func _ready() -> void:
 	_sanitize_tracked_enemy_paths()
 	_sanitize_activation_target_paths()
-	_check_enemy_clear_state()
+	if _uses_enemy_tracking():
+		_check_enemy_clear_state()
 
 
 func _process(delta: float) -> void:
 	if _has_activated:
+		return
+	if not _uses_enemy_tracking():
 		return
 
 	_monitor_elapsed += delta
@@ -32,6 +42,16 @@ func _process(delta: float) -> void:
 
 	_monitor_elapsed = 0.0
 	_check_enemy_clear_state()
+
+
+# External activation path for scripts like text_load_script.
+func activate() -> void:
+	if _has_activated:
+		return
+	if not _allows_external_activation():
+		return
+
+	_activate_attached_script()
 
 
 func _check_enemy_clear_state() -> void:
@@ -47,6 +67,14 @@ func _check_enemy_clear_state() -> void:
 		return
 
 	_activate_attached_script()
+
+
+func _uses_enemy_tracking() -> bool:
+	return trigger_mode == TriggerMode.ENEMY_TRACKING_ONLY or trigger_mode == TriggerMode.ENEMY_OR_EXTERNAL
+
+
+func _allows_external_activation() -> bool:
+	return trigger_mode == TriggerMode.EXTERNAL_ONLY or trigger_mode == TriggerMode.ENEMY_OR_EXTERNAL
 
 
 func _get_tracked_enemies() -> Array[Node]:

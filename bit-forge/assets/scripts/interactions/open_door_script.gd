@@ -21,7 +21,10 @@ func _ready() -> void:
 
 
 func activate() -> void:
-	open()
+	if _is_open:
+		close()
+	else:
+		open()
 
 
 func open() -> void:
@@ -36,3 +39,17 @@ func open() -> void:
 	await tween.finished
 	_is_animating = false
 	_is_open = true
+
+
+func close() -> void:
+	if not _is_open or _is_animating:
+		return
+
+	_is_animating = true
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_SINE)
+	tween.set_ease(Tween.EASE_IN)
+	tween.tween_property(self, "basis", _closed_basis, max(open_duration_seconds, 0.01))
+	await tween.finished
+	_is_animating = false
+	_is_open = false

@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=4 uid="uid://ba3j2sjlm6n01"]
+[gd_scene load_steps=35 format=4 uid="uid://ba3j2sjlm6n01"]
 
 [ext_resource type="MeshLibrary" uid="uid://bj0rr7y87a2yi" path="res://assets/meshLibrary/meshLibraryDG1.0.tres" id="1_urfxu"]
 [ext_resource type="Script" uid="uid://co8mhdlr5q72c" path="res://area_3d_return_to_main.gd" id="2_6fv0s"]
@@ -8,7 +8,9 @@
 [ext_resource type="PackedScene" uid="uid://b5iaxt3mxc1d1" path="res://lantern.tscn" id="5_n64vx"]
 [ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="7_2lmw2"]
 [ext_resource type="PackedScene" uid="uid://betm82nub5mou" path="res://assets/characters/Simple_enemy.tscn" id="8_duaes"]
+[ext_resource type="Script" uid="uid://barsl800rpfpu" path="res://assets/scripts/interactions/text_load_script.gd" id="8_wm84j"]
 [ext_resource type="PackedScene" uid="uid://dnlmtwhr48tf" path="res://assets/characters/Sheild_enemy.tscn" id="9_pmjms"]
+[ext_resource type="FontFile" uid="uid://d2pfoqd6a43ho" path="res://assets/needToBeSorted/textLibrary/Jacquard24-Regular.ttf" id="9_qnhl2"]
 [ext_resource type="PackedScene" uid="uid://d0lavvo1li0b0" path="res://assets/characters/Sword_enemy.tscn" id="10_twuh0"]
 [ext_resource type="PackedScene" uid="uid://1fa7m6js7h8i" path="res://assets/characters/Spear_enemy.tscn" id="11_cglxp"]
 [ext_resource type="PackedScene" uid="uid://0sa8t2xhpu1h" path="res://assets/characters/Sword_and_sheild_enemy.tscn" id="12_uagi7"]
@@ -69,6 +71,16 @@ shadow_mesh = SubResource("ArrayMesh_6fv0s")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_2lmw2"]
 size = Vector3(2.537323, 2.9, 2.275879)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ytifb"]
+size = Vector3(2.6118164, 1, 4.935852)
+
+[sub_resource type="LabelSettings" id="LabelSettings_yhsln"]
+font = ExtResource("9_qnhl2")
+font_size = 60
+outline_size = 16
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 9
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_wm84j"]
 
@@ -193,6 +205,31 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2, 1
 can_sprint = true
 
 [node name="enemySpawn" type="Node3D" parent="NavigationRegion3D"]
+
+[node name="Area3D" type="Area3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.734514, 3.654026, 15.388674)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.7918658, 0)
+shape = SubResource("BoxShape3D_ytifb")
+script = ExtResource("8_wm84j")
+label_path = NodePath("../CanvasLayer/Label")
+visible_duration_seconds = 3.0
+trigger_once = true
+activate_script_target = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="NavigationRegion3D/Area3D"]
+
+[node name="Label" type="Label" parent="NavigationRegion3D/Area3D/CanvasLayer"]
+offset_left = 571.0
+offset_top = 325.0
+offset_right = 1421.4348
+offset_bottom = 814.0
+size_flags_horizontal = 4
+text = "'Right Click' with your sword to sheild yourself."
+label_settings = SubResource("LabelSettings_yhsln")
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="Simple_Enemy" parent="NavigationRegion3D" instance=ExtResource("8_duaes")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 20, 1, 15)
