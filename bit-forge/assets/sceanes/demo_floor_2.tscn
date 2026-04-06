@@ -1,12 +1,14 @@
-[gd_scene load_steps=34 format=4 uid="uid://dmdan4gv2sx0i"]
+[gd_scene load_steps=36 format=4 uid="uid://dmdan4gv2sx0i"]
 
 [ext_resource type="MeshLibrary" uid="uid://bj0rr7y87a2yi" path="res://assets/meshLibrary/meshLibraryDG1.0.tres" id="1_153f1"]
 [ext_resource type="PackedScene" uid="uid://bfe7ahbjg7j0t" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/wall_doorway.glb" id="2_xoibg"]
 [ext_resource type="PackedScene" uid="uid://dvfv7y1bx4tuu" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/candle.gltf.glb" id="3_s5md8"]
 [ext_resource type="Script" uid="uid://co8mhdlr5q72c" path="res://area_3d_return_to_main.gd" id="3_ypg7w"]
+[ext_resource type="PackedScene" uid="uid://bah1qhfhmwy3t" path="res://assets/needToBeSorted/health_pot.tscn" id="4_3mk0x"]
 [ext_resource type="Script" uid="uid://cbypbua6tkine" path="res://assets/scripts/interactions/control_3d_script.gd" id="4_8t3sv"]
 [ext_resource type="PackedScene" uid="uid://buinyv7mrh1v8" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/stairs_wood.gltf.glb" id="4_70kja"]
 [ext_resource type="PackedScene" uid="uid://d0vall5ns1csw" path="res://assets/sceanes/demo_floor_1.tscn" id="4_wxwjg"]
+[ext_resource type="PackedScene" uid="uid://dgfdrx5w0sf27" path="res://assets/needToBeSorted/speed_pot.tscn" id="5_4unlr"]
 [ext_resource type="Texture2D" uid="uid://bon776gu03tv5" path="res://addons/kaykit_dungeon_remastered/Assets/obj/dungeon_texture.png" id="5_65lm4"]
 [ext_resource type="Script" uid="uid://b1cht55xv8ln1" path="res://assets/scripts/interactions/open_door_script.gd" id="5_sjuxg"]
 [ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="6_hkj6y"]
@@ -167,6 +169,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 146.90535, 11.983941, -15.987
 
 [node name="candle_gltf" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("3_s5md8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.07791424, 0)
+
+[node name="health_pot" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("4_3mk0x")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.90534973, -6.983941, 9.987173)
+
+[node name="health_pot2" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("4_3mk0x")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.90535, 13.016059, 3.987173)
+
+[node name="speed_pot" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("5_4unlr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9053497, -6.983941, -7.012827)
 
 [node name="lantern_hanging7" parent="NavigationRegion3D/decGrid" instance=ExtResource("8_03wyf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 138.70882, 23.90176, -9.940533)

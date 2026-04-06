@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=4 uid="uid://ba3j2sjlm6n01"]
+[gd_scene load_steps=38 format=4 uid="uid://ba3j2sjlm6n01"]
 
 [ext_resource type="MeshLibrary" uid="uid://bj0rr7y87a2yi" path="res://assets/meshLibrary/meshLibraryDG1.0.tres" id="1_urfxu"]
 [ext_resource type="Script" uid="uid://co8mhdlr5q72c" path="res://area_3d_return_to_main.gd" id="2_6fv0s"]
@@ -11,8 +11,11 @@
 [ext_resource type="Script" uid="uid://barsl800rpfpu" path="res://assets/scripts/interactions/text_load_script.gd" id="8_wm84j"]
 [ext_resource type="PackedScene" uid="uid://dnlmtwhr48tf" path="res://assets/characters/Sheild_enemy.tscn" id="9_pmjms"]
 [ext_resource type="FontFile" uid="uid://d2pfoqd6a43ho" path="res://assets/needToBeSorted/textLibrary/Jacquard24-Regular.ttf" id="9_qnhl2"]
+[ext_resource type="PackedScene" uid="uid://bah1qhfhmwy3t" path="res://assets/needToBeSorted/health_pot.tscn" id="10_qnhl2"]
 [ext_resource type="PackedScene" uid="uid://d0lavvo1li0b0" path="res://assets/characters/Sword_enemy.tscn" id="10_twuh0"]
 [ext_resource type="PackedScene" uid="uid://1fa7m6js7h8i" path="res://assets/characters/Spear_enemy.tscn" id="11_cglxp"]
+[ext_resource type="PackedScene" uid="uid://dgfdrx5w0sf27" path="res://assets/needToBeSorted/speed_pot.tscn" id="11_yhsln"]
+[ext_resource type="PackedScene" uid="uid://qb5oih6dwfj7" path="res://assets/needToBeSorted/defense_pot.tscn" id="12_5mn1u"]
 [ext_resource type="PackedScene" uid="uid://0sa8t2xhpu1h" path="res://assets/characters/Sword_and_sheild_enemy.tscn" id="12_uagi7"]
 [ext_resource type="PackedScene" uid="uid://dbx53yqxojvk6" path="res://assets/characters/Leader_enemy.tscn" id="13_mnf8p"]
 [ext_resource type="PackedScene" uid="uid://c0mv1miegsgrr" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/key.gltf.glb" id="14_uagi7"]
@@ -73,7 +76,7 @@ shadow_mesh = SubResource("ArrayMesh_6fv0s")
 size = Vector3(2.537323, 2.9, 2.275879)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ytifb"]
-size = Vector3(2.6118164, 1, 4.935852)
+size = Vector3(5, 1, 4)
 
 [sub_resource type="LabelSettings" id="LabelSettings_yhsln"]
 font = ExtResource("9_qnhl2")
@@ -230,6 +233,71 @@ text = "'Right Click' with your sword to sheild yourself."
 label_settings = SubResource("LabelSettings_yhsln")
 horizontal_alignment = 1
 autowrap_mode = 2
+
+[node name="health_pot" parent="NavigationRegion3D/Area3D" instance=ExtResource("10_qnhl2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50.547516, -2.654026, -16.168213)
+
+[node name="Area3D2" type="Area3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55.734512, 3.654026, -14.611326)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Area3D2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.805908, -0.7918658, 13.467926)
+shape = SubResource("BoxShape3D_ytifb")
+script = ExtResource("8_wm84j")
+label_path = NodePath("../CanvasLayer/Label")
+visible_duration_seconds = 3.0
+trigger_once = true
+activate_script_target = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="NavigationRegion3D/Area3D2"]
+
+[node name="Label" type="Label" parent="NavigationRegion3D/Area3D2/CanvasLayer"]
+offset_left = 571.0
+offset_top = 325.0
+offset_right = 1421.4348
+offset_bottom = 814.0
+size_flags_horizontal = 4
+text = "Health Pots restore 5 Hp."
+label_settings = SubResource("LabelSettings_yhsln")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="speed_pot" parent="NavigationRegion3D/Area3D2/CanvasLayer" instance=ExtResource("11_yhsln")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 58, 1, -25)
+
+[node name="health_pot" parent="NavigationRegion3D/Area3D2" instance=ExtResource("10_qnhl2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50.547516, -2.654026, -38.168213)
+
+[node name="Area3D3" type="Area3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55.734512, 3.654026, -14.611326)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Area3D3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1940918, -0.7918658, 6.467926)
+shape = SubResource("BoxShape3D_ytifb")
+script = ExtResource("8_wm84j")
+label_path = NodePath("../CanvasLayer/Label")
+visible_duration_seconds = 3.0
+trigger_once = true
+activate_script_target = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="NavigationRegion3D/Area3D3"]
+
+[node name="Label" type="Label" parent="NavigationRegion3D/Area3D3/CanvasLayer"]
+offset_left = 571.0
+offset_top = 325.0
+offset_right = 1421.4348
+offset_bottom = 814.0
+size_flags_horizontal = 4
+text = "Other Pot's also exist."
+label_settings = SubResource("LabelSettings_yhsln")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="defense_pot" parent="NavigationRegion3D/Area3D3/CanvasLayer" instance=ExtResource("12_5mn1u")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57, 1, -22)
+
+[node name="health_pot" parent="NavigationRegion3D/Area3D3" instance=ExtResource("10_qnhl2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50.547516, -2.654026, -38.168213)
 
 [node name="Simple_Enemy" parent="NavigationRegion3D" instance=ExtResource("8_duaes")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 20, 1, 15)
