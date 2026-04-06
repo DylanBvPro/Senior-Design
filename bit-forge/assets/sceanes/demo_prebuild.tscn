@@ -239,6 +239,9 @@ horizontal_alignment = 1
 [node name="WorldEnvironment" type="WorldEnvironment" parent="NavigationRegion3D"]
 environment = SubResource("Environment_1eokk")
 
+[node name="Skeleton_Enemy2" parent="NavigationRegion3D" instance=ExtResource("5_pjmji")]
+transform = Transform3D(-1, 0, -8.940697e-08, 0, 1, 0, 8.940697e-08, 0, -1, 1.4206989, 5.070032, -19.953432)
+
 [node name="wall_doorway_door_obj (1)" type="MeshInstance3D" parent="."]
 transform = Transform3D(-0.5678992, 0, 0.8230991, 0, 1, 0, -0.8230991, 0, -0.5678992, 1.4279704, 5.049985, -23.560518)
 mesh = SubResource("ArrayMesh_1eokk")

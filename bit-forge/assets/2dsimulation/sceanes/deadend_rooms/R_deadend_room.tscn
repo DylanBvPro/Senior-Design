@@ -1,0 +1,34 @@
+[gd_scene load_steps=4 format=3 uid="uid://oo37odvbfrnp"]
+
+[ext_resource type="TileSet" uid="uid://cueb5oiaij68h" path="res://assets/2dsimulation/other/tilemap2d.tres" id="1_57jdl"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_1x4ph"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1x4ph"]
+size = Vector2(16, 32)
+
+[node name="Main" type="Node2D"]
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+disable_mode = 1
+
+[node name="TileMap" type="TileMap" parent="StaticBody2D"]
+position = Vector2(-59, -26)
+tile_set = ExtResource("1_57jdl")
+format = 2
+layer_0/tile_data = PackedInt32Array(196608, 0, 0, 393216, 0, 4, 196609, 65536, 0, 196610, 262144, 0, 262145, 196608, 2, 327681, 196608, 2, 393217, 65536, 4, 393218, 65536, 4, 262146, 131072, 1, 327682, 131072, 3, 262144, 0, 1, 327680, 0, 2)
+
+[node name="Door1" type="StaticBody2D" parent="StaticBody2D/TileMap"]
+position = Vector2(80, 0)
+collision_layer = 2
+collision_mask = 2
+physics_material_override = SubResource("PhysicsMaterial_1x4ph")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D/TileMap/Door1"]
+position = Vector2(-40, 80)
+shape = SubResource("RectangleShape2D_1x4ph")
+
+[node name="TileMap2" type="TileMap" parent="StaticBody2D/TileMap"]
+tile_set = ExtResource("1_57jdl")
+format = 2
+layer_0/tile_data = PackedInt32Array(327681, 589824, 5, 262145, 589824, 4)

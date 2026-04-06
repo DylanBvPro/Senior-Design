@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://bby2g2ydf10jv"]
+
+[ext_resource type="Script" uid="uid://ch04t0j5ll5mm" path="res://assets/2dsimulation/scripts/room_generation.gd" id="1_syigc"]
+[ext_resource type="Script" uid="uid://bgca4ylwut7r5" path="res://assets/2dsimulation/scripts/free_view.gd" id="2_sc5p2"]
+
+[node name="demo_test_sceanes" type="Node2D"]
+script = ExtResource("1_syigc")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(9, 7)
+script = ExtResource("2_sc5p2")
