@@ -776,6 +776,16 @@ enemy_scene = ExtResource("9_si5oj")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.40812, 1, 34.33248)
 script = ExtResource("7_qcn7e")
 
+[node name="bow2" type="Node3D" parent="NavigationRegion3D/enemySpawn4"]
+transform = Transform3D(0.18611243, 0, 0.98252845, 0, 1, 0, -0.98252845, 0, 0.18611243, -6.2612147, 1.2221382, -31.260733)
+script = ExtResource("7_rfh7q")
+enemy_scene = ExtResource("12_dkwey")
+
+[node name="bow3" type="Node3D" parent="NavigationRegion3D/enemySpawn4"]
+transform = Transform3D(0.18611243, 0, 0.98252845, 0, 1, 0, -0.98252845, 0, 0.18611243, 1.2852149, 1.2221382, -19.142937)
+script = ExtResource("7_rfh7q")
+enemy_scene = ExtResource("12_dkwey")
+
 [node name="sword" type="Node3D" parent="NavigationRegion3D/enemySpawn4"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.7205715, 0, -9.445942)
 script = ExtResource("7_rfh7q")
@@ -922,7 +932,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 2.1855915, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -85.6896, 2.4574232, 28.86607)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6382599, 0, 1.2637482)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6382599, 0, -1.8650055)
 shape = SubResource("BoxShape3D_135jv")
 script = ExtResource("25_ev7x3")
 visible_duration_seconds = 3.0
