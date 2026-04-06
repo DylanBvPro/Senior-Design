@@ -71,7 +71,6 @@ path_max_distance = 1000.0
 avoidance_enabled = true
 radius = 107.47
 time_horizon_obstacles = 0.72
-debug_enabled = true
 debug_path_custom_point_size = 50.0
 
 [node name="Timer" type="Timer" parent="CharacterBody2D"]
