@@ -339,7 +339,7 @@ transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 128,
 transform = Transform3D(0.49999994, 0, -0.8660254, 0, 1, 0, 0.8660254, 0, 0.49999994, 148.30519, 13, -24.499636)
 
 [node name="Bow_Enemy" parent="." instance=ExtResource("14_8t3sv")]
-transform = Transform3D(0.25881907, 0, 0.9659258, 0, 1, 0, -0.9659258, 0, 0.25881907, 139, 9, -7)
+transform = Transform3D(0.25881907, 0, 0.9659258, 0, 1, 0, -0.9659258, 0, 0.25881907, 138.69574, 9, -5.8644857)
 
 [node name="Bow_Enemy5" parent="." instance=ExtResource("14_8t3sv")]
 transform = Transform3D(-0.51075315, 0, -0.85972744, 0, 1, 0, 0.85972744, 0, -0.51075315, 146.95465, 9, -4.868557)
@@ -415,6 +415,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 131.5, 25, -9)
 
 [node name="fence4" parent="." instance=ExtResource("21_sjuxg")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 135, 25, -9)
+
+[node name="fence5" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(-6.556708e-08, 0, 0.8, 0, 0.6, 0, -1.5, 0, -3.4969112e-08, 132.74475, 21, -11.9)
+
+[node name="fence6" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(1.5, 0, 0, 0, 0.6, 0, 0, 0, 0.8, 135.74475, 16.94366, -19.275074)
+
+[node name="fence7" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(2.9802322e-08, 0, 0.79999995, 0, 0.6, 0, -1.5, 0, 1.4901161e-08, 143.24475, 13.040425, -16.070168)
+
+[node name="fence8" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(1.5, 0, -4.987027e-08, 0, 0.6, 0, 9.53694e-08, 0, 0.79999995, 140.26509, 8.964388, -8.753575)
 
 [node name="candle_gltf" parent="." instance=ExtResource("3_s5md8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 139, 17, -2)
