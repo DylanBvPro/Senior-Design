@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bmxhyjkk0k41m"]
+[gd_scene load_steps=11 format=3 uid="uid://bmxhyjkk0k41m"]
 
 [ext_resource type="Texture2D" uid="uid://d3bntl61lbb0" path="res://assets/oldAssets/book.png" id="2_eiy7p"]
 [ext_resource type="Texture2D" uid="uid://dsg6jn511uwup" path="res://assets/oldAssets/book - Copy.png" id="2_h7a2f"]
@@ -18,9 +18,15 @@ region_rect = Rect2(9, 1, 74, 88)
 [sub_resource type="LabelSettings" id="LabelSettings_eiy7p"]
 font = ExtResource("4_7r1g0")
 font_size = 45
-font_color = Color(0.89943457, 0.91305816, 0.94101363, 1)
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
 shadow_size = 20
-shadow_color = Color(0, 0, 0, 0.365)
+
+[sub_resource type="LabelSettings" id="LabelSettings_7r1g0"]
+font = ExtResource("4_7r1g0")
+font_size = 150
+outline_size = 16
+outline_color = Color(0, 0, 0, 1)
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -153,8 +159,20 @@ region_enabled = true
 region_rect = Rect2(9, 1, 74, 88)
 
 [node name="Ff6403f373b32b6Dfc8b1Bc8e2Adebc0" type="Sprite2D" parent="Book"]
+visible = false
 position = Vector2(-7.6293945e-06, -7.6293945e-06)
 scale = Vector2(0.084090896, 0.42307684)
 texture = ExtResource("4_qoqlk")
 
 [node name="ShaderGlobalsOverride" type="ShaderGlobalsOverride" parent="Book/Ff6403f373b32b6Dfc8b1Bc8e2Adebc0"]
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 641.0
+offset_top = 57.0
+offset_right = 1405.0
+offset_bottom = 208.0
+text = "Rogue System"
+label_settings = SubResource("LabelSettings_7r1g0")
+horizontal_alignment = 1
+vertical_alignment = 1

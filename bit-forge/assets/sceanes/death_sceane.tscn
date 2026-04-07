@@ -28,10 +28,9 @@ region_rect = Rect2(9, 1, 74, 88)
 font = ExtResource("6_ab357")
 font_size = 45
 font_color = Color(0.89943457, 0.91305816, 0.94101363, 1)
-outline_size = 7
+outline_size = 9
 outline_color = Color(0, 0, 0, 1)
 shadow_size = 20
-shadow_color = Color(0, 0, 0, 0.365)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_5hfox"]
 render_priority = 0

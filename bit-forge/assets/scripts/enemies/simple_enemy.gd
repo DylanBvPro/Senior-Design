@@ -47,6 +47,7 @@ func _ready() -> void:
 	current_health = enemy_info.max_health
 	_update_health_bar()
 	_disable_hand_attachment_physics()
+	_configure_detection_area_collision()
 	
 	target = get_tree().get_first_node_in_group("player")
 	#print("target", target)
@@ -109,6 +110,17 @@ func _set_runtime_active(active: bool) -> void:
 
 	if has_node("DetectionArea") and not is_dead:
 		$DetectionArea.monitoring = true
+
+
+func _configure_detection_area_collision() -> void:
+	if not has_node("DetectionArea"):
+		return
+
+	var detection_area := $DetectionArea as Area3D
+	if detection_area == null:
+		return
+
+	detection_area.collision_layer = 0
 
 
 func _disable_hand_attachment_physics(use_left: bool = true, use_right: bool = true) -> void:
