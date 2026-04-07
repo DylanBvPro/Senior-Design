@@ -153,6 +153,10 @@ var arrow_recharge_index := -1
 var arrow_charges: Array[float] = []
 var mana_regen_delay_remaining: float = 0.0
 var combo_speed_multiplier: float = 1.0
+var temporary_speed_multiplier: float = 1.0
+var speed_bonus_duration_seconds: float = 0.0
+var defense_bonus_damage_multiplier: float = 1.0
+var defense_bonus_duration_seconds: float = 0.0
 var damage_knockback_velocity := Vector3.ZERO
 var camera_bob_time: float = 0.0
 var damage_shake_time_left: float = 0.0
@@ -197,13 +201,15 @@ var focusedObject: Interactable
 var hit_flash_rect: ColorRect = null
 var loading_overlay_rect: ColorRect = null
 var loading_label_tween: Tween = null
+var _defense_bonus_timer: Timer = null
+var _speed_bonus_timer: Timer = null
 
 func _ready() -> void:
 	add_to_group("player")
 	check_input_mappings()
 	look_rotation.y = rotation.y
 	look_rotation.x = head.rotation.x
-	move_speed = base_speed * combo_speed_multiplier
+	move_speed = base_speed * _get_effective_speed_multiplier()
 	sword_hitbox.monitoring = true
 	sword_hitbox.monitorable = true
 	sword_hitbox.body_entered.connect(_on_sword_body_entered)
@@ -246,6 +252,8 @@ func _ready() -> void:
 	call_deferred("_sync_equipped_weapon_visuals")
 	_setup_hit_flash_overlay()
 	_setup_loading_ui_overlay()
+	_setup_defense_bonus_timer()
+	_setup_speed_bonus_timer()
 	_set_speedlines_density(0.0)
 
 	if capture_mouse_on_ready:
@@ -404,7 +412,7 @@ func _physics_process(delta: float) -> void:
 		var input_dir := Input.get_vector(input_left, input_right, input_forward, input_back)
 		var move_dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 		if is_dashing:
-			var dash_speed := sprint_speed * combo_speed_multiplier
+			var dash_speed := sprint_speed * _get_effective_speed_multiplier()
 			velocity.x = dash_direction.x * dash_speed
 			velocity.z = dash_direction.z * dash_speed
 		elif move_dir:
@@ -445,7 +453,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			if is_crouching:
 				is_crouching = false
-				move_speed = base_speed * combo_speed_multiplier
+				move_speed = base_speed * _get_effective_speed_multiplier()
 				collider.shape.height = normal_collider_height
 				head.position = normal_camera_height
 
@@ -455,7 +463,51 @@ func set_combo_speed_multiplier(multiplier: float) -> void:
 	if is_crouching:
 		move_speed = crouch_speed
 	else:
-		move_speed = base_speed * combo_speed_multiplier
+		move_speed = base_speed * _get_effective_speed_multiplier()
+
+
+func apply_temporary_speed_bonus(duration_seconds: float = 60.0, speed_multiplier: float = 1.5) -> void:
+	temporary_speed_multiplier = maxf(speed_multiplier, 1.0)
+	speed_bonus_duration_seconds = maxf(duration_seconds, 0.0)
+	if _speed_bonus_timer == null:
+		_setup_speed_bonus_timer()
+	if _speed_bonus_timer != null:
+		_speed_bonus_timer.start(speed_bonus_duration_seconds)
+
+	if not is_crouching:
+		move_speed = base_speed * _get_effective_speed_multiplier()
+
+
+func get_speed_bonus_time_remaining() -> float:
+	if _speed_bonus_timer == null:
+		return 0.0
+	return maxf(_speed_bonus_timer.time_left, 0.0)
+
+
+func get_speed_bonus_duration() -> float:
+	return maxf(speed_bonus_duration_seconds, 0.0)
+
+
+func _setup_speed_bonus_timer() -> void:
+	if _speed_bonus_timer != null:
+		return
+	_speed_bonus_timer = Timer.new()
+	_speed_bonus_timer.one_shot = true
+	_speed_bonus_timer.wait_time = 60.0
+	add_child(_speed_bonus_timer)
+	if not _speed_bonus_timer.timeout.is_connected(_on_speed_bonus_timeout):
+		_speed_bonus_timer.timeout.connect(_on_speed_bonus_timeout)
+
+
+func _on_speed_bonus_timeout() -> void:
+	temporary_speed_multiplier = 1.0
+	speed_bonus_duration_seconds = 0.0
+	if not is_crouching:
+		move_speed = base_speed * _get_effective_speed_multiplier()
+
+
+func _get_effective_speed_multiplier() -> float:
+	return maxf(combo_speed_multiplier * temporary_speed_multiplier, 1.0)
 
 
 func add_dash_charge(amount: int = 1) -> void:
@@ -726,6 +778,7 @@ func get_mana_percentage() -> float:
 # --------------------
 func apply_damage(amount: float, source: Node = null) -> void:
 	var final_damage = max(amount - current_armor, 0)
+	final_damage *= clampf(defense_bonus_damage_multiplier, 0.0, 1.0)
 	if is_shield_blocking and equipped_weapon == WeaponType.SWORD:
 		final_damage *= maxf(1.0 - clampf(shield_block_damage_reduction, 0.0, 1.0), 0.0)
 	if final_damage > 0.0:
@@ -744,6 +797,41 @@ func take_damage(amount: float, source: Node = null) -> void:
 func heal(amount: float) -> void:
 	current_hp = clamp(current_hp + amount, 0, max_hp)
 	_update_health_bar()
+
+
+func apply_temporary_defense_bonus(duration_seconds: float = 60.0, damage_multiplier: float = 0.5) -> void:
+	defense_bonus_damage_multiplier = clampf(damage_multiplier, 0.0, 1.0)
+	defense_bonus_duration_seconds = maxf(duration_seconds, 0.0)
+	if _defense_bonus_timer == null:
+		_setup_defense_bonus_timer()
+	if _defense_bonus_timer != null:
+		_defense_bonus_timer.start(defense_bonus_duration_seconds)
+
+
+func get_defense_bonus_time_remaining() -> float:
+	if _defense_bonus_timer == null:
+		return 0.0
+	return maxf(_defense_bonus_timer.time_left, 0.0)
+
+
+func get_defense_bonus_duration() -> float:
+	return maxf(defense_bonus_duration_seconds, 0.0)
+
+
+func _setup_defense_bonus_timer() -> void:
+	if _defense_bonus_timer != null:
+		return
+	_defense_bonus_timer = Timer.new()
+	_defense_bonus_timer.one_shot = true
+	_defense_bonus_timer.wait_time = 60.0
+	add_child(_defense_bonus_timer)
+	if not _defense_bonus_timer.timeout.is_connected(_on_defense_bonus_timeout):
+		_defense_bonus_timer.timeout.connect(_on_defense_bonus_timeout)
+
+
+func _on_defense_bonus_timeout() -> void:
+	defense_bonus_damage_multiplier = 1.0
+	defense_bonus_duration_seconds = 0.0
 
 func _update_health_bar() -> void:
 	if health_bar:
@@ -932,7 +1020,7 @@ func _update_camera_effects(delta: float) -> void:
 		return
 
 	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
-	var speed_reference := max(base_speed * combo_speed_multiplier, 0.001)
+	var speed_reference := max(base_speed * _get_effective_speed_multiplier(), 0.001)
 	var moving_factor := clamp(horizontal_speed / speed_reference, 0.0, 1.0)
 
 	var bob_speed := lerp(camera_bob_idle_speed, camera_bob_moving_speed, moving_factor)

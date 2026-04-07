@@ -16,6 +16,10 @@ signal killed_by_player(enemy: Node)
 @export var navigation_path_check_interval: float = 0.5
 @export var activity_check_interval: float = 0.2
 @export var player_hit_iframe_duration: float = 0.12
+@export var use_local_avoidance: bool = true
+@export_range(0.1, 5.0, 0.1) var avoidance_radius_meters: float = 0.9
+@export_range(0.5, 10.0, 0.1) var avoidance_neighbor_distance_meters: float = 2.5
+@export_range(1, 32, 1) var avoidance_max_neighbors: int = 8
 
 var target: CharacterBody3D
 var player_in_detection: bool = false
@@ -47,11 +51,12 @@ func _ready() -> void:
 	current_health = enemy_info.max_health
 	_update_health_bar()
 	_disable_hand_attachment_physics()
+	_configure_detection_area_collision()
 	
 	target = get_tree().get_first_node_in_group("player")
 	#print("target", target)
 	nav_agent.velocity_computed.connect(_on_velocity_computed)
-	nav_agent.avoidance_enabled = false
+	_configure_navigation_avoidance()
 	
 	if animation_player:
 		animation_player.play(enemy_info.idle_animation)
@@ -109,6 +114,28 @@ func _set_runtime_active(active: bool) -> void:
 
 	if has_node("DetectionArea") and not is_dead:
 		$DetectionArea.monitoring = true
+
+
+func _configure_detection_area_collision() -> void:
+	if not has_node("DetectionArea"):
+		return
+
+	var detection_area := $DetectionArea as Area3D
+	if detection_area == null:
+		return
+
+	detection_area.collision_layer = 0
+
+
+func _configure_navigation_avoidance() -> void:
+	nav_agent.avoidance_enabled = use_local_avoidance
+	if not use_local_avoidance:
+		return
+
+	# Tune local avoidance so enemies spread out instead of occupying one point.
+	nav_agent.radius = avoidance_radius_meters
+	nav_agent.neighbor_distance = avoidance_neighbor_distance_meters
+	nav_agent.max_neighbors = avoidance_max_neighbors
 
 
 func _disable_hand_attachment_physics(use_left: bool = true, use_right: bool = true) -> void:

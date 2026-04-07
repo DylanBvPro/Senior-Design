@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=4 uid="uid://c2e56yt0dltv0"]
+[gd_scene load_steps=24 format=4 uid="uid://c2e56yt0dltv0"]
 
 [ext_resource type="PackedScene" uid="uid://dese0rxb067w7" path="res://empty_openable_chest.tscn" id="1_66pqt"]
 [ext_resource type="MeshLibrary" uid="uid://dv7dkfcpdwhjh" path="res://assets/needToBeSorted/simplemeshlib5.tres" id="1_ychtm"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://ca4256bfsf16w" path="res://camera_3d.gd" id="8_l2drg"]
 [ext_resource type="PackedScene" uid="uid://bmxhyjkk0k41m" path="res://MainMenu.tscn" id="8_occ4w"]
 [ext_resource type="Shader" uid="uid://bvrjmfb1ox4q0" path="res://addons/proto_controller/world_shader.gdshader" id="8_rijwq"]
+[ext_resource type="PackedScene" uid="uid://bah1qhfhmwy3t" path="res://assets/needToBeSorted/health_pot.tscn" id="11_n8dx0"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_s02by"]
 resource_name = "texture"
@@ -211,3 +212,6 @@ environment = SubResource("Environment_mw6cc")
 transform = Transform3D(-0.25881904, 0, -0.9659258, 0, 1, 0, 0.9659258, 0, -0.25881904, -3, 1.1008959, 2)
 
 [node name="Control" parent="." instance=ExtResource("8_occ4w")]
+
+[node name="health_pot" parent="." instance=ExtResource("11_n8dx0")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0)

@@ -1,12 +1,14 @@
-[gd_scene load_steps=34 format=4 uid="uid://dmdan4gv2sx0i"]
+[gd_scene load_steps=36 format=4 uid="uid://dmdan4gv2sx0i"]
 
 [ext_resource type="MeshLibrary" uid="uid://bj0rr7y87a2yi" path="res://assets/meshLibrary/meshLibraryDG1.0.tres" id="1_153f1"]
 [ext_resource type="PackedScene" uid="uid://bfe7ahbjg7j0t" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/wall_doorway.glb" id="2_xoibg"]
 [ext_resource type="PackedScene" uid="uid://dvfv7y1bx4tuu" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/candle.gltf.glb" id="3_s5md8"]
 [ext_resource type="Script" uid="uid://co8mhdlr5q72c" path="res://area_3d_return_to_main.gd" id="3_ypg7w"]
+[ext_resource type="PackedScene" uid="uid://bah1qhfhmwy3t" path="res://assets/needToBeSorted/health_pot.tscn" id="4_3mk0x"]
 [ext_resource type="Script" uid="uid://cbypbua6tkine" path="res://assets/scripts/interactions/control_3d_script.gd" id="4_8t3sv"]
 [ext_resource type="PackedScene" uid="uid://buinyv7mrh1v8" path="res://addons/kaykit_dungeon_remastered/Assets/gltf/stairs_wood.gltf.glb" id="4_70kja"]
 [ext_resource type="PackedScene" uid="uid://d0vall5ns1csw" path="res://assets/sceanes/demo_floor_1.tscn" id="4_wxwjg"]
+[ext_resource type="PackedScene" uid="uid://dgfdrx5w0sf27" path="res://assets/needToBeSorted/speed_pot.tscn" id="5_4unlr"]
 [ext_resource type="Texture2D" uid="uid://bon776gu03tv5" path="res://addons/kaykit_dungeon_remastered/Assets/obj/dungeon_texture.png" id="5_65lm4"]
 [ext_resource type="Script" uid="uid://b1cht55xv8ln1" path="res://assets/scripts/interactions/open_door_script.gd" id="5_sjuxg"]
 [ext_resource type="PackedScene" uid="uid://bs72ogkvdd7d6" path="res://addons/proto_controller/proto_controller.tscn" id="6_hkj6y"]
@@ -168,6 +170,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 146.90535, 11.983941, -15.987
 [node name="candle_gltf" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("3_s5md8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.07791424, 0)
 
+[node name="health_pot" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("4_3mk0x")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.90534973, -6.983941, 9.987173)
+
+[node name="health_pot2" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("4_3mk0x")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.90535, 13.016059, 3.987173)
+
+[node name="speed_pot" parent="NavigationRegion3D/decGrid/lantern_hanging10" instance=ExtResource("5_4unlr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9053497, -6.983941, -7.012827)
+
 [node name="lantern_hanging7" parent="NavigationRegion3D/decGrid" instance=ExtResource("8_03wyf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 138.70882, 23.90176, -9.940533)
 
@@ -328,7 +339,7 @@ transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 128,
 transform = Transform3D(0.49999994, 0, -0.8660254, 0, 1, 0, 0.8660254, 0, 0.49999994, 148.30519, 13, -24.499636)
 
 [node name="Bow_Enemy" parent="." instance=ExtResource("14_8t3sv")]
-transform = Transform3D(0.25881907, 0, 0.9659258, 0, 1, 0, -0.9659258, 0, 0.25881907, 139, 9, -7)
+transform = Transform3D(0.25881907, 0, 0.9659258, 0, 1, 0, -0.9659258, 0, 0.25881907, 138.69574, 9, -5.8644857)
 
 [node name="Bow_Enemy5" parent="." instance=ExtResource("14_8t3sv")]
 transform = Transform3D(-0.51075315, 0, -0.85972744, 0, 1, 0, 0.85972744, 0, -0.51075315, 146.95465, 9, -4.868557)
@@ -404,6 +415,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 131.5, 25, -9)
 
 [node name="fence4" parent="." instance=ExtResource("21_sjuxg")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 135, 25, -9)
+
+[node name="fence5" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(-6.556708e-08, 0, 0.8, 0, 0.6, 0, -1.5, 0, -3.4969112e-08, 132.74475, 21, -11.9)
+
+[node name="fence6" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(1.5, 0, 0, 0, 0.6, 0, 0, 0, 0.8, 135.74475, 16.94366, -19.275074)
+
+[node name="fence7" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(2.9802322e-08, 0, 0.79999995, 0, 0.6, 0, -1.5, 0, 1.4901161e-08, 143.24475, 13.040425, -16.070168)
+
+[node name="fence8" parent="." instance=ExtResource("21_sjuxg")]
+transform = Transform3D(1.5, 0, -4.987027e-08, 0, 0.6, 0, 9.53694e-08, 0, 0.79999995, 140.26509, 8.964388, -8.753575)
 
 [node name="candle_gltf" parent="." instance=ExtResource("3_s5md8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 139, 17, -2)

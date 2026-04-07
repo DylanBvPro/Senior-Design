@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://daxh1as5ublye"]
+[gd_scene load_steps=27 format=3 uid="uid://daxh1as5ublye"]
 
 [ext_resource type="Texture2D" uid="uid://d254mvopdt5uy" path="res://assets/needToBeSorted/models/Finished Models/seamless-pattern-ground-with-stones-brown-soil-texture-for-wallpaper-illustration-backdrop-land-background-for-graphic-design-game-vector.jpg" id="1_rjj1h"]
 [ext_resource type="MeshLibrary" uid="uid://dxtwnwd8k4i8f" path="res://assets/needToBeSorted/simplemeshlib3333.tres" id="1_s4c34"]
@@ -18,6 +18,9 @@
 [ext_resource type="PackedScene" uid="uid://betm82nub5mou" path="res://assets/characters/Simple_enemy.tscn" id="11_uuk4k"]
 [ext_resource type="PackedScene" uid="uid://dbx53yqxojvk6" path="res://assets/characters/Leader_enemy.tscn" id="12_cx2rr"]
 [ext_resource type="PackedScene" uid="uid://uln5xq0ngkpv" path="res://assets/characters/boss_enemy.tscn" id="13_vnmt6"]
+[ext_resource type="PackedScene" uid="uid://bah1qhfhmwy3t" path="res://assets/needToBeSorted/health_pot.tscn" id="19_f37kj"]
+[ext_resource type="PackedScene" uid="uid://qb5oih6dwfj7" path="res://assets/needToBeSorted/defense_pot.tscn" id="20_usqna"]
+[ext_resource type="PackedScene" uid="uid://dgfdrx5w0sf27" path="res://assets/needToBeSorted/speed_pot.tscn" id="21_wsjv7"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_s4c34"]
 sky_horizon_color = Color(1.5513475, 1.5685976, 1.5925975, 1)
@@ -172,3 +175,12 @@ transform = Transform3D(-0.93969256, 0, 0.3420202, 0, 1, 0, -0.3420202, 0, -0.93
 
 [node name="Simple_Enemy4" parent="." instance=ExtResource("11_uuk4k")]
 transform = Transform3D(-0.93969256, 0, 0.3420202, 0, 1, 0, -0.3420202, 0, -0.93969256, -44.259796, 1.8000002, -37.467896)
+
+[node name="health_pot" parent="." instance=ExtResource("19_f37kj")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 1, 20)
+
+[node name="defense_pot" parent="." instance=ExtResource("20_usqna")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 1, 15)
+
+[node name="speed_pot" parent="." instance=ExtResource("21_wsjv7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 1, 18)

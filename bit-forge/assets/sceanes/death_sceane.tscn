@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://t2f21sksq1k6"]
+[gd_scene load_steps=17 format=3 uid="uid://t2f21sksq1k6"]
 
 [ext_resource type="MeshLibrary" uid="uid://bj0rr7y87a2yi" path="res://assets/meshLibrary/meshLibraryDG1.0.tres" id="1_56do2"]
 [ext_resource type="MeshLibrary" uid="uid://pqodp2rcgtb2" path="res://Grave-1.tres" id="2_5rcto"]
@@ -9,6 +9,7 @@
 [ext_resource type="FontFile" uid="uid://d2pfoqd6a43ho" path="res://assets/needToBeSorted/textLibrary/Jacquard24-Regular.ttf" id="6_ab357"]
 [ext_resource type="Script" uid="uid://8loxy603tc27" path="res://assets/scripts/UI/return_button_script.gd" id="6_hpqx5"]
 [ext_resource type="Script" uid="uid://to5p8x87yuxi" path="res://assets/scripts/UI/quit_button_script.gd" id="8_pu3qp"]
+[ext_resource type="Shader" uid="uid://bvrjmfb1ox4q0" path="res://addons/proto_controller/world_shader.gdshader" id="10_n4fbd"]
 
 [sub_resource type="Environment" id="Environment_5rcto"]
 background_mode = 5
@@ -27,10 +28,19 @@ region_rect = Rect2(9, 1, 74, 88)
 font = ExtResource("6_ab357")
 font_size = 45
 font_color = Color(0.89943457, 0.91305816, 0.94101363, 1)
-outline_size = 7
+outline_size = 9
 outline_color = Color(0, 0, 0, 1)
 shadow_size = 20
-shadow_color = Color(0, 0, 0, 0.365)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5hfox"]
+render_priority = 0
+shader = ExtResource("10_n4fbd")
+shader_parameter/pixel_size = 3
+shader_parameter/edge_darkness = 0.5
+shader_parameter/edge_threshold = 0.05
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_vk8pq"]
+material = SubResource("ShaderMaterial_5hfox")
 
 [node name="death_sceane" type="Node3D"]
 
@@ -155,3 +165,9 @@ grow_vertical = 2
 text = "Accept Death"
 label_settings = SubResource("LabelSettings_ybon6")
 horizontal_alignment = 1
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Camera3D"]
+transform = Transform3D(-1, -8.742278e-08, -5.2108035e-15, 0, -5.9604645e-08, 1, -8.742278e-08, 1, 5.9604645e-08, 0, 0, -0.4)
+extra_cull_margin = 16384.0
+gi_mode = 2
+mesh = SubResource("PlaneMesh_vk8pq")
