@@ -1,5 +1,5 @@
 ![Project Status](https://img.shields.io/badge/Project%20Status:-Ongoing-%23c8a951?style=for-the-badge)
-![Bug Status](https://img.shields.io/badge/Bug%20Status:-Major%20Issues-red?style=for-the-badge)
+![Bug Status](https://img.shields.io/badge/Bug%20Status:-Minor%20Issues-%23c8a951?style=for-the-badge)
 ![Maintenance](https://img.shields.io/badge/Maintained:-N/A-lightgrey?style=for-the-badge)
 
 ## About Me
